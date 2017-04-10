@@ -56,6 +56,7 @@ namespace NuGet.Build.Tasks.Pack
         string[] Tags { get; }
         string[] TargetFrameworks { get; }
         TItem[] TargetPathsToSymbols { get; }
+        TItem[] TfmSpecificAssemblyReferences { get; }
         string Title { get; }
     }
 }

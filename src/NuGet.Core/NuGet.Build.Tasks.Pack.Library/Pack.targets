@@ -23,7 +23,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <PackageId Condition=" '$(PackageId)' == '' ">$(AssemblyName)</PackageId>
     <PackageVersion Condition=" '$(PackageVersion)' == '' ">$(Version)</PackageVersion>
     <IncludeContentInPack Condition="'$(IncludeContentInPack)'==''">true</IncludeContentInPack>
-    <GenerateNuspecDependsOn>_LoadPackInputItems; _WalkEachTargetPerFramework; _GetPackageFiles; $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
+    <GenerateNuspecDependsOn>_LoadPackInputItems; _WalkEachTargetPerFramework; _GetPackageFiles; _GetReferences $(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
     <Description Condition="'$(Description)'==''">Package Description</Description>
     <IsPackable Condition="'$(IsPackable)'=='' AND '$(IsTestProject)'=='true'">false</IsPackable>
     <IsPackable Condition="'$(IsPackable)'==''">true</IsPackable>
@@ -169,6 +169,7 @@ Copyright (c) .NET Foundation. All rights reserved.
               MinClientVersion="$(MinClientVersion)"
               Serviceable="$(Serviceable)"
               AssemblyReferences="@(_References)"
+              TfmSpecificAssemblyReferences="@(_TfmSpecificReferences)"
               ContinuePackingAfterGeneratingNuspec="$(ContinuePackingAfterGeneratingNuspec)"
               NuspecOutputPath="$(BaseIntermediateOutputPath)"
               IncludeBuildOutput="$(IncludeBuildOutput)"
@@ -238,6 +239,25 @@ Copyright (c) .NET Foundation. All rights reserved.
           TaskParameter="TargetOutputs"
           ItemName="_SourceFiles" />
     </MSBuild>
+
+    <MSBuild
+      Projects="$(MSBuildProjectFullPath)"
+      Targets="_GetTfmSpecificFrameworkAssemblyReferences"
+      Properties="TargetFramework=%(_TargetFrameworks.Identity);
+                  BuildProjectReferences=false;">
+
+      <Output
+          TaskParameter="TargetOutputs"
+          ItemName="_TfmSpecificReferences" />
+    </MSBuild>
+  </Target>
+
+  <Target Name ="_GetTfmSpecicFrameworkAssemblyReferences" Returns="@(TfmSpecificFrameworkAssemblyReferences)">
+    <ItemGroup>
+      <TfmSpecificFrameworkAssemblyReference Include="@(Reference)" Condition="'%(Reference.Pack)' == 'true'">
+        <TargetFramework>$(TargetFramework)</TargetFramework>
+      </TfmSpecificFrameworkAssemblyReference>
+    </ItemGroup>
   </Target>
   
   <Target Name="_GetBuildOutputFilesWithTfm"
@@ -276,6 +296,18 @@ Copyright (c) .NET Foundation. All rights reserved.
         <FinalOutputPath>$(ProjectPriFullPath)</FinalOutputPath>
         <TargetPath>$(ProjectPriFileName)</TargetPath>
       </_PathToPriFile>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    ============================================================
+    _GetReferences
+    Entry point for getting framework assembly references
+    ============================================================
+  -->
+  <Target Name="_GetReferences">
+    <ItemGroup>
+      <_References Include="@(Reference)" Condition="'%(Reference.Pack)' == 'true'"/>
     </ItemGroup>
   </Target>
 

@@ -48,6 +48,7 @@ namespace NuGet.Build.Tasks.Pack
         public string MinClientVersion { get; set; }
         public bool Serviceable { get; set; }
         public ITaskItem[] AssemblyReferences { get; set; }
+        public ITaskItem[] TfmSpecificAssemblyReferences { get; set; }
         public bool ContinuePackingAfterGeneratingNuspec { get; set; }
         public string NuspecOutputPath { get; set; }
         public bool IncludeBuildOutput { get; set; }
@@ -161,6 +162,7 @@ namespace NuGet.Build.Tasks.Pack
                 TargetFrameworks = MSBuildStringUtility.TrimAndExcludeNullOrEmpty(TargetFrameworks),
                 TargetPathsToSymbols = MSBuildUtility.WrapMSBuildItem(TargetPathsToSymbols),
                 Title = MSBuildStringUtility.TrimAndGetNullForEmpty(Title),
+                TfmSpecificAssemblyReferences = MSBuildUtility.WrapMSBuildItem(TfmSpecificAssemblyReferences),
             };
         }
     }

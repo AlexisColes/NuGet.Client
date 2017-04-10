@@ -182,7 +182,48 @@ namespace NuGet.Build.Tasks.Pack
             }
 
             PopulateProjectAndPackageReferences(builder, assetsFile);
+            PopulateFrameworkAssemblyReferences(builder, request);
             return builder;
+        }
+
+        private void PopulateFrameworkAssemblyReferences(PackageBuilder builder, IPackTaskRequest<IMSBuildItem> request)
+        {
+            // First add all the assembly references which are not specific to a certain TFM.
+            var nonTfmSpecificRefs = new HashSet<string>(
+                request.AssemblyReferences
+                .Select(t => t.Identity)
+                .Distinct(), StringComparer.OrdinalIgnoreCase);
+            builder.FrameworkReferences.AddRange(
+                nonTfmSpecificRefs.Select(t => new FrameworkAssemblyReference(
+                    t, new[] { NuGetFramework.AnyFramework })
+                    ));
+
+            var tfmSpecificRefs = new Dictionary<string, IList<string>>(StringComparer.OrdinalIgnoreCase);
+            // Then add the TFM specific framework assembly references, and ignore any which have already been added above.
+            foreach(var tfmRef in request.TfmSpecificAssemblyReferences)
+            {
+                var targetFramework = tfmRef.GetProperty("TargetFramework");
+                if (nonTfmSpecificRefs.Contains(tfmRef.Identity))
+                {
+                    continue;
+                }
+
+                if (tfmSpecificRefs.ContainsKey(tfmRef.Identity))
+                {
+                    tfmSpecificRefs[tfmRef.Identity].Add(targetFramework);
+                }
+                else
+                {
+                    tfmSpecificRefs.Add(tfmRef.Identity, new List<string>() { targetFramework });
+                }                
+            }
+
+            builder.FrameworkReferences.AddRange(
+                tfmSpecificRefs.Select(
+                    t => new FrameworkAssemblyReference(
+                        t.Key, t.Value.Select(
+                            k => NuGetFramework.Parse(k))
+                            )));
         }
 
         public PackCommandRunner GetPackCommandRunner(

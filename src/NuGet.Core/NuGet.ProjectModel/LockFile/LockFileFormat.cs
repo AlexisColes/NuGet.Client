@@ -1,4 +1,4 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -50,6 +50,8 @@ namespace NuGet.ProjectModel
         private const string ProjectFileToolGroupsProperty = "projectFileToolGroups";
         private const string PackageFoldersProperty = "packageFolders";
         private const string PackageSpecProperty = "project";
+        private const string ErrorsProperty = "errors";
+        private const string WarningsProperty = "warnings";
 
         // Legacy property names
         private const string RuntimeAssembliesProperty = "runtimeAssemblies";
@@ -496,11 +498,11 @@ namespace NuGet.ProjectModel
                 item.Path,
                 new JObject(item.Properties.OrderBy(prop => prop.Key, StringComparer.Ordinal).Select(x =>
                 {
-                    if (Boolean.TrueString.Equals(x.Value, StringComparison.OrdinalIgnoreCase))
+                    if (bool.TrueString.Equals(x.Value, StringComparison.OrdinalIgnoreCase))
                     {
                         return new JProperty(x.Key, true);
                     }
-                    else if (Boolean.FalseString.Equals(x.Value, StringComparison.OrdinalIgnoreCase))
+                    else if (bool.FalseString.Equals(x.Value, StringComparison.OrdinalIgnoreCase))
                     {
                         return new JProperty(x.Key, false);
                     }

@@ -43,14 +43,14 @@ namespace NuGet.VisualStudio
         private async Task<object> MigrateProjectToPackageRefAsync(string projectUniqueName)
         {
             await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var project = _solutionManager.Value.GetDTEProject(projectUniqueName);
+            var project = _solutionManager.Value.GetVsProjectAdapter(projectUniqueName);
 
             if (project == null)
             {
                 throw new InvalidOperationException(string.Format(VsResources.Error_ProjectNotInCache, projectUniqueName));
             }
 
-            var projectSafeName = await EnvDTEProjectInfoUtility.GetCustomUniqueNameAsync(project);
+            var projectSafeName = project.CustomUniqueName;
 
             var nuGetProject = _solutionManager.Value.GetNuGetProject(projectSafeName);
 
@@ -65,8 +65,8 @@ namespace NuGet.VisualStudio
                 _solutionManager.Value.SaveProject(nuGetProject);
                 
                 var legacyPackageRefBasedProject = new LegacyCSProjPackageReferenceProject(
-                    new EnvDTEProjectAdapter(project),
-                    VsHierarchyUtility.GetProjectId(project));
+                    new EnvDTEProjectAdapter(project.DteProject),
+                    project.ProjectId);
                 
                 await ProjectJsonToPackageRefMigrator.MigrateAsync(
                     legacyPackageRefBasedProject,
@@ -87,9 +87,9 @@ namespace NuGet.VisualStudio
             }
         }
 
-        private void ReloadProject(Project project)
+        private void ReloadProject(IVsProjectAdapter project)
         {
-            project = _solutionManager.Value.GetDTEProject(project.FullName);
+            project = _solutionManager.Value.GetVsProjectAdapter(project.FullName);
         }
     }
 }

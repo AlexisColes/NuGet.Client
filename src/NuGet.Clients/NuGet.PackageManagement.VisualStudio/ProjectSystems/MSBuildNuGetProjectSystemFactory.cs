@@ -8,8 +8,7 @@ using System.Linq;
 using Microsoft.VisualStudio.Shell;
 using NuGet.ProjectManagement;
 using NuGet.VisualStudio;
-using EnvDTEProject = EnvDTE.Project;
-using IMSBuildNuGetProjectSystemThunk = System.Func<EnvDTE.Project, NuGet.ProjectManagement.INuGetProjectContext, NuGet.ProjectManagement.IMSBuildNuGetProjectSystem>;
+using IMSBuildNuGetProjectSystemThunk = System.Func<NuGet.VisualStudio.IVsProjectAdapter, NuGet.ProjectManagement.INuGetProjectContext, NuGet.ProjectManagement.IMSBuildNuGetProjectSystem>;
 
 namespace NuGet.PackageManagement.VisualStudio
 {
@@ -26,32 +25,32 @@ namespace NuGet.PackageManagement.VisualStudio
                 { VsProjectTypes.DeploymentProjectTypeGuid, (project, nuGetProjectContext) => new VSMSBuildNuGetProjectSystem(project, nuGetProjectContext) }
             };
 
-        public static IMSBuildNuGetProjectSystem CreateMSBuildNuGetProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
+        public static IMSBuildNuGetProjectSystem CreateMSBuildNuGetProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (envDTEProject == null)
+            if (vsProjectAdapter == null)
             {
-                throw new ArgumentNullException(nameof(envDTEProject));
+                throw new ArgumentNullException(nameof(vsProjectAdapter));
             }
 
-            if (String.IsNullOrEmpty(envDTEProject.FullName))
+            if (string.IsNullOrEmpty(vsProjectAdapter.FullName))
             {
                 throw new InvalidOperationException(
-                    String.Format(CultureInfo.CurrentCulture,
-                        Strings.DTE_ProjectUnsupported, EnvDTEProjectInfoUtility.GetName(envDTEProject)));
+                    string.Format(CultureInfo.CurrentCulture,
+                        Strings.DTE_ProjectUnsupported, vsProjectAdapter.ProjectName));
             }
 
-            if (EnvDTEProjectUtility.SupportsINuGetProjectSystem(envDTEProject))
+            if (VsProjectAdapterUtility.SupportsINuGetProjectSystem(vsProjectAdapter))
             {
                 throw new InvalidOperationException(
                     string.Format(CultureInfo.CurrentCulture, Strings.DTE_ProjectUnsupported, typeof(IMSBuildNuGetProjectSystem).FullName));
             }
 
-            var guids = VsHierarchyUtility.GetProjectTypeGuids(envDTEProject);
+            var guids = vsProjectAdapter.ProjectTypeGuids;
             if (guids.Contains(VsProjectTypes.CppProjectTypeGuid)) // Got a cpp project
             {
-                return new NativeProjectSystem(envDTEProject, nuGetProjectContext);
+                return new NativeProjectSystem(vsProjectAdapter, nuGetProjectContext);
             }
 
             // Try to get a factory for the project type guid
@@ -60,12 +59,12 @@ namespace NuGet.PackageManagement.VisualStudio
                 IMSBuildNuGetProjectSystemThunk factory;
                 if (_factories.TryGetValue(guid, out factory))
                 {
-                    return factory(envDTEProject, nuGetProjectContext);
+                    return factory(vsProjectAdapter, nuGetProjectContext);
                 }
             }
 
             // Fall back to the default if we have no special project types
-            return new VSMSBuildNuGetProjectSystem(envDTEProject, nuGetProjectContext);
+            return new VSMSBuildNuGetProjectSystem(vsProjectAdapter, nuGetProjectContext);
         }
     }
 }

@@ -60,7 +60,7 @@ namespace NuGet.PackageManagement.VisualStudio
             return project != null;
         }
 
-        public bool TryGetDTEProject(string name, out EnvDTE.Project project)
+        public bool TryGetVsProjectAdapter(string name, out IVsProjectAdapter project)
         {
             if (string.IsNullOrEmpty(name))
             {
@@ -72,7 +72,7 @@ namespace NuGet.PackageManagement.VisualStudio
             CacheEntry cacheEntry;
             if (TryGetCacheEntry(name, out cacheEntry))
             {
-                project = cacheEntry.EnvDTEProject;
+                project = cacheEntry.VsProjectAdapter;
             }
 
             return project != null;
@@ -185,14 +185,14 @@ namespace NuGet.PackageManagement.VisualStudio
             }
         }
 
-        public IReadOnlyList<EnvDTE.Project> GetEnvDTEProjects()
+        public IReadOnlyList<IVsProjectAdapter> GetVsProjectAdapters()
         {
             _readerWriterLock.EnterReadLock();
 
             try
             {
                 return _primaryCache
-                    .Select(kv => kv.Value.EnvDTEProject)
+                    .Select(kv => kv.Value.VsProjectAdapter)
                     .ToList();
             }
             finally
@@ -226,7 +226,7 @@ namespace NuGet.PackageManagement.VisualStudio
             return false;
         }
 
-        public bool AddProject(ProjectNames projectNames, EnvDTE.Project dteProject, NuGetProject nuGetProject)
+        public bool AddProject(ProjectNames projectNames, IVsProjectAdapter vsProjectAdapter, NuGetProject nuGetProject)
         {
             if (projectNames == null)
             {
@@ -249,13 +249,13 @@ namespace NuGet.PackageManagement.VisualStudio
                     addEntryFactory: k => new CacheEntry
                     {
                         NuGetProject = nuGetProject,
-                        EnvDTEProject = dteProject,
+                        VsProjectAdapter = vsProjectAdapter,
                         ProjectNames = projectNames
                     },
                     updateEntryFactory: (k, e) =>
                     {
                         e.NuGetProject = nuGetProject;
-                        e.EnvDTEProject = dteProject;
+                        e.VsProjectAdapter = vsProjectAdapter;
                         e.ProjectNames = projectNames;
                         return e;
                     });
@@ -473,7 +473,7 @@ namespace NuGet.PackageManagement.VisualStudio
         private class CacheEntry
         {
             public NuGetProject NuGetProject { get; set; }
-            public EnvDTE.Project EnvDTEProject { get; set; }
+            public IVsProjectAdapter VsProjectAdapter { get; set; }
             public DependencyGraphSpec ProjectRestoreInfo { get; set; }
             public ProjectNames ProjectNames { get; set; }
         }

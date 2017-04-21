@@ -19,10 +19,10 @@ namespace NuGet.PackageManagement.VisualStudio
     /// </summary>
     public class VSMSBuildNuGetProject : MSBuildNuGetProject
     {
-        private readonly EnvDTEProject _project;
+        private readonly IVsProjectAdapter _project;
 
         public VSMSBuildNuGetProject(
-            EnvDTEProject project,
+            IVsProjectAdapter project,
             IMSBuildNuGetProjectSystem msbuildNuGetProjectSystem,
             string folderNuGetProjectPath,
             string packagesConfigFolderPath) : base(
@@ -33,7 +33,7 @@ namespace NuGet.PackageManagement.VisualStudio
             _project = project;
 
             // set project id
-            var projectId = VsHierarchyUtility.GetProjectId(project);
+            var projectId = project.ProjectId;
             InternalMetadata.Add(NuGetProjectMetadataKeys.ProjectId, projectId);
         }
 
@@ -45,7 +45,7 @@ namespace NuGet.PackageManagement.VisualStudio
             }
 
             var resolvedProjects = context.DeferredPackageSpecs.Select(project => project.Name);
-            return VSProjectRestoreReferenceUtility.GetDirectProjectReferences(_project, resolvedProjects, context.Logger);
+            return VSProjectRestoreReferenceUtility.GetDirectProjectReferences(_project.DteProject, resolvedProjects, context.Logger);
         }
     }
 }

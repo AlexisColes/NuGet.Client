@@ -193,6 +193,7 @@
     <Compile Include="Utility\SettingsHelper.cs" />
     <Compile Include="Utility\TaskCombinators.cs" />
     <Compile Include="Utility\VCProjectHelper.cs" />
+    <Compile Include="Utility\VsProjectAdapterUtility.cs" />
     <Compile Include="Utility\VSProjectRestoreReferenceUtility.cs" />
     <Compile Include="VisualStudioAccountProvider.cs" />
     <Compile Include="VisualStudioActivityLogger.cs" />
@@ -211,6 +212,9 @@
     <Compile Include="Utility\MicrosoftBuildEvaluationProjectUtility.cs" />
     <Compile Include="VS.ProjectSystems\VcxProject.cs" />
     <Compile Include="IDE\VSSolutionManager.cs" />
+    <Compile Include="VsProject\IVsProjectAdapterProvider.cs" />
+    <Compile Include="VsProject\VsProjectAdapter.cs" />
+    <Compile Include="VsProject\VsProjectAdapterProvider.cs" />
     <Compile Include="VSSettings.cs" />
   </ItemGroup>
   <ItemGroup>

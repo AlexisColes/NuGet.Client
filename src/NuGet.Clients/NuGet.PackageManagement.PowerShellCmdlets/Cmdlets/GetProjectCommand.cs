@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation;
 using EnvDTE;
 using NuGet.PackageManagement.VisualStudio;
+using NuGet.VisualStudio;
 
 namespace NuGet.PackageManagement.PowerShellCmdlets
 {
@@ -50,7 +51,7 @@ namespace NuGet.PackageManagement.PowerShellCmdlets
 
             if (All.IsPresent)
             {
-                var projects = EnvDTESolutionUtility.GetAllEnvDTEProjects(DTE);
+                var projects = VsSolutionManager.GetAllVsProjectAdapters();
                 WriteObject(projects, enumerateCollection: true);
             }
             else
@@ -58,7 +59,7 @@ namespace NuGet.PackageManagement.PowerShellCmdlets
                 // No name specified; return default project (if not null)
                 if (Name == null)
                 {
-                    Project defaultProject = GetDefaultProject();
+                    IVsProjectAdapter defaultProject = GetDefaultProject();
                     if (defaultProject != null)
                     {
                         WriteObject(defaultProject);

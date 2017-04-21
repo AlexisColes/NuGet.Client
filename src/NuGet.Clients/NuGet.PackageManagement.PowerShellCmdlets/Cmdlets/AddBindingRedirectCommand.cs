@@ -45,12 +45,12 @@ namespace NuGet.PackageManagement.PowerShellCmdlets
                 {
                     CheckSolutionState();
 
-                    var projects = new List<Project>();
+                    var projects = new List<IVsProjectAdapter>();
 
                     // if no project specified, use default
                     if (ProjectName == null)
                     {
-                        Project defaultProject = GetDefaultProject();
+                        IVsProjectAdapter defaultProject = GetDefaultProject();
 
                         // if no default project (empty solution), throw terminating
                         if (defaultProject == null)
@@ -71,7 +71,7 @@ namespace NuGet.PackageManagement.PowerShellCmdlets
 
                     try
                     {
-                        foreach (Project project in projects)
+                        foreach (IVsProjectAdapter project in projects)
                         {
                             var projectAssembliesCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
                             var redirects = await RuntimeHelpers.AddBindingRedirectsAsync(VsSolutionManager, project, domain, projectAssembliesCache, _frameworkMultiTargeting, this);

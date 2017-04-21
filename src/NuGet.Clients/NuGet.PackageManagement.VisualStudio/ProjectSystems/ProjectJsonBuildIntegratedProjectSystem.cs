@@ -19,20 +19,20 @@ namespace NuGet.PackageManagement.VisualStudio
     /// </summary>
     public class ProjectJsonBuildIntegratedProjectSystem : ProjectJsonBuildIntegratedNuGetProject
     {
-        private readonly EnvDTEProject _envDTEProject;
+        private readonly IVsProjectAdapter _vsProjectAdapter;
         private IScriptExecutor _scriptExecutor;
 
         public ProjectJsonBuildIntegratedProjectSystem(
             string jsonConfigPath,
             string msbuildProjectFilePath,
-            EnvDTEProject envDTEProject,
+            IVsProjectAdapter vsProjectAdapter,
             string uniqueName)
             : base(jsonConfigPath, msbuildProjectFilePath)
         {
-            _envDTEProject = envDTEProject;
+            _vsProjectAdapter = vsProjectAdapter;
 
             // set project id
-            var projectId = VsHierarchyUtility.GetProjectId(envDTEProject);
+            var projectId = _vsProjectAdapter.ProjectId;
             InternalMetadata.Add(NuGetProjectMetadataKeys.ProjectId, projectId);
 
             InternalMetadata.Add(NuGetProjectMetadataKeys.UniqueName, uniqueName);
@@ -60,7 +60,7 @@ namespace NuGet.PackageManagement.VisualStudio
             return
                 await
                     ScriptExecutorUtil.ExecuteScriptAsync(identity, packageInstallPath, projectContext, ScriptExecutor,
-                        _envDTEProject, throwOnFailure);
+                        _vsProjectAdapter.DteProject, throwOnFailure);
         }
 
         public override Task<IReadOnlyList<ProjectRestoreReference>> GetDirectProjectReferencesAsync(DependencyGraphCacheContext context)
@@ -71,7 +71,7 @@ namespace NuGet.PackageManagement.VisualStudio
             }
 
             var resolvedProjects = context.DeferredPackageSpecs.Select(project => project.Name);
-            return VSProjectRestoreReferenceUtility.GetDirectProjectReferences(_envDTEProject, resolvedProjects, context.Logger);
+            return VSProjectRestoreReferenceUtility.GetDirectProjectReferences(_vsProjectAdapter.DteProject, resolvedProjects, context.Logger);
         }
     }
 }

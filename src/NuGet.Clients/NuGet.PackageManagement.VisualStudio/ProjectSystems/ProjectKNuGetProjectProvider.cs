@@ -19,11 +19,11 @@ namespace NuGet.PackageManagement.VisualStudio
     [Name(nameof(ProjectKNuGetProjectProvider))]
     public class ProjectKNuGetProjectProvider : IProjectSystemProvider
     {
-        public bool TryCreateNuGetProject(EnvDTE.Project dteProject, ProjectSystemProviderContext context, out NuGetProject result)
+        public bool TryCreateNuGetProject(IVsProjectAdapter project, ProjectSystemProviderContext context, out NuGetProject result)
         {
-            if (dteProject == null)
+            if (project == null)
             {
-                throw new ArgumentNullException(nameof(dteProject));
+                throw new ArgumentNullException(nameof(project));
             }
 
             if (context == null)
@@ -35,7 +35,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
             result = null;
 
-            var projectK = GetProjectKProject(dteProject);
+            var projectK = GetProjectKProject(project);
             if (projectK == null)
             {
                 return false;
@@ -43,18 +43,23 @@ namespace NuGet.PackageManagement.VisualStudio
 
             result = new ProjectKNuGetProject(
                 projectK,
-                dteProject.Name,
-                EnvDTEProjectInfoUtility.GetCustomUniqueName(dteProject),
-                VsHierarchyUtility.GetProjectId(dteProject));
+                project.ProjectName,
+                project.CustomUniqueName,
+                project.ProjectId);
 
             return true;
         }
 
-        public static INuGetPackageManager GetProjectKProject(EnvDTE.Project dteProject)
+        public static INuGetPackageManager GetProjectKProject(IVsProjectAdapter project)
+        {
+            return GetProjectKProject(project.DteProject);
+        }
+
+        public static INuGetPackageManager GetProjectKProject(EnvDTE.Project project)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            var vsProject = VsHierarchyUtility.ToVsHierarchy(dteProject) as IVsProject;
+            var vsProject = project as IVsProject;
             if (vsProject == null)
             {
                 return null;

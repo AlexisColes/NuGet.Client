@@ -35,11 +35,11 @@ namespace NuGet.PackageManagement.VisualStudio
             _projectSystemCache = projectSystemCache;
         }
         
-        public bool TryCreateNuGetProject(EnvDTE.Project dteProject, ProjectSystemProviderContext context, out NuGetProject result)
+        public bool TryCreateNuGetProject(IVsProjectAdapter vsProjectAdapter, ProjectSystemProviderContext context, out NuGetProject result)
         {
-            if (dteProject == null)
+            if (vsProjectAdapter == null)
             {
-                throw new ArgumentNullException(nameof(dteProject));
+                throw new ArgumentNullException(nameof(vsProjectAdapter));
             }
 
             if (context == null)
@@ -51,7 +51,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
             result = null;
 
-            var project = new EnvDTEProjectAdapter(dteProject);
+            var project = new EnvDTEProjectAdapter(vsProjectAdapter.DteProject);
             if (!project.IsLegacyCSProjPackageReferenceProject)
             {
                 return false;
@@ -62,20 +62,9 @@ namespace NuGet.PackageManagement.VisualStudio
 
             result = new LegacyCSProjPackageReferenceProject(
                 project,
-                VsHierarchyUtility.GetProjectId(dteProject));
+                vsProjectAdapter.ProjectId);
 
             return true;
-        }
-
-        private ProjectSystem.UnconfiguredProject GetUnconfiguredProject(EnvDTE.Project project)
-        {
-            IVsBrowseObjectContext context = project as IVsBrowseObjectContext;
-            if (context == null && project != null)
-            { // VC implements this on their DTE.Project.Object
-                context = project.Object as IVsBrowseObjectContext;
-            }
-
-            return context != null ? context.UnconfiguredProject : null;
         }
     }
 }

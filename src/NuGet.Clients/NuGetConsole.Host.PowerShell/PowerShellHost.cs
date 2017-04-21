@@ -857,8 +857,9 @@ namespace NuGetConsole.Host.PowerShell.Implementation
             Debug.Assert(ThreadHelper.CheckAccess());
 
             var safeName = solutionManager.GetNuGetProjectSafeName(nuGetProject);
-            var project = solutionManager.GetDTEProject(safeName);
-            return EnvDTEProjectInfoUtility.GetDisplayName(project);
+            var project = solutionManager.GetVsProjectAdapter(safeName);
+
+            return VsProjectAdapterInfoUtility.GetDisplayName(project);
         }
 
         #region ITabExpansion

@@ -44,11 +44,11 @@ namespace NuGet.PackageManagement.VisualStudio
             _projectSystemCache = projectSystemCache;
         }
 
-        public bool TryCreateNuGetProject(EnvDTE.Project dteProject, ProjectSystemProviderContext context, out NuGetProject result)
+        public bool TryCreateNuGetProject(IVsProjectAdapter vsProject, ProjectSystemProviderContext context, out NuGetProject result)
         {
-            if (dteProject == null)
+            if (vsProject == null)
             {
-                throw new ArgumentNullException(nameof(dteProject));
+                throw new ArgumentNullException(nameof(vsProject));
             }
 
             if (context == null)
@@ -61,7 +61,7 @@ namespace NuGet.PackageManagement.VisualStudio
             result = null;
 
             // The project must be an IVsHierarchy.
-            var hierarchy = VsHierarchyUtility.ToVsHierarchy(dteProject);
+            var hierarchy = vsProject.IVsHierarchy;
             
             if (hierarchy == null)
             {
@@ -98,30 +98,20 @@ namespace NuGet.PackageManagement.VisualStudio
             // Lazy load the CPS enabled JoinableTaskFactory for the UI.
             NuGetUIThreadHelper.SetJoinableTaskFactoryFromService(ProjectServiceAccessor.Value as IProjectServiceAccessor);
 
-            var projectNames = ProjectNames.FromDTEProject(dteProject);
-            var fullProjectPath = EnvDTEProjectInfoUtility.GetFullProjectPath(dteProject);
-            var unconfiguredProject = GetUnconfiguredProject(dteProject);
+            var projectNames = vsProject.ProjectNames;
+            var fullProjectPath = vsProject.FullProjectPath;
+            var unconfiguredProject = vsProject.GetUnconfiguredProject();
 
             result = new CpsPackageReferenceProject(
-                dteProject.Name,
-                EnvDTEProjectInfoUtility.GetCustomUniqueName(dteProject),
+                vsProject.ProjectName,
+                vsProject.CustomUniqueName,
                 fullProjectPath,
                 _projectSystemCache,
-                dteProject,
+                vsProject,
                 unconfiguredProject,
-                VsHierarchyUtility.GetProjectId(dteProject));
+                vsProject.ProjectId);
 
             return true;
-        }
-
-        private UnconfiguredProject GetUnconfiguredProject(EnvDTE.Project project)
-        {
-             IVsBrowseObjectContext context = project as IVsBrowseObjectContext;
-             if (context == null && project != null)
-             { // VC implements this on their DTE.Project.Object
-                 context = project.Object as IVsBrowseObjectContext;
-             }
-             return context != null ? context.UnconfiguredProject : null;
         }
     }
 }

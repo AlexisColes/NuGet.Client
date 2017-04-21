@@ -21,11 +21,11 @@ namespace NuGet.PackageManagement.VisualStudio
 #endif
     public class MSBuildNuGetProjectProvider : IProjectSystemProvider
     {
-        public bool TryCreateNuGetProject(EnvDTE.Project envDTEProject, ProjectSystemProviderContext context, out NuGetProject result)
+        public bool TryCreateNuGetProject(IVsProjectAdapter vsProjectAdapter, ProjectSystemProviderContext context, out NuGetProject result)
         {
-            if (envDTEProject == null)
+            if (vsProjectAdapter == null)
             {
-                throw new ArgumentNullException(nameof(envDTEProject));
+                throw new ArgumentNullException(nameof(vsProjectAdapter));
             }
 
             if (context == null)
@@ -38,7 +38,7 @@ namespace NuGet.PackageManagement.VisualStudio
             result = null;
 
             var msBuildNuGetProjectSystem = MSBuildNuGetProjectSystemFactory.CreateMSBuildNuGetProjectSystem(
-                                envDTEProject,
+                                vsProjectAdapter,
                                 context.ProjectContext);
 
             var isWebSite = msBuildNuGetProjectSystem is WebSiteProjectSystem;
@@ -47,7 +47,7 @@ namespace NuGet.PackageManagement.VisualStudio
             if (!isWebSite)
             {
                 // Find the project file path
-                var projectFilePath = EnvDTEProjectInfoUtility.GetFullProjectPath(envDTEProject);
+                var projectFilePath = vsProjectAdapter.FullProjectPath;
 
                 if (!string.IsNullOrEmpty(projectFilePath))
                 {
@@ -74,8 +74,8 @@ namespace NuGet.PackageManagement.VisualStudio
                         result = new ProjectJsonBuildIntegratedProjectSystem(
                             projectJsonPath,
                             msbuildProjectFile.FullName,
-                            envDTEProject,
-                            EnvDTEProjectInfoUtility.GetCustomUniqueName(envDTEProject));
+                            vsProjectAdapter,
+                            vsProjectAdapter.CustomUniqueName);
                     }
                 }
             }
@@ -86,10 +86,10 @@ namespace NuGet.PackageManagement.VisualStudio
                 var folderNuGetProjectFullPath = context.PackagesPathFactory();
 
                 // Project folder path is the packages config folder path
-                var packagesConfigFolderPath = EnvDTEProjectInfoUtility.GetFullPath(envDTEProject);
+                var packagesConfigFolderPath = vsProjectAdapter.FullPath;
 
                 result = new VSMSBuildNuGetProject(
-                    envDTEProject,
+                    vsProjectAdapter,
                     msBuildNuGetProjectSystem,
                     folderNuGetProjectFullPath,
                     packagesConfigFolderPath);

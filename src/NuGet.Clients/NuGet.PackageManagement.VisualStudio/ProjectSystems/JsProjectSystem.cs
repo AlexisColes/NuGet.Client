@@ -16,8 +16,8 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public class JsProjectSystem : CpsProjectSystem
     {
-        public JsProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
-            : base(envDTEProject, nuGetProjectContext)
+        public JsProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
+            : base(vsProjectAdapter, nuGetProjectContext)
         {
         }
 
@@ -33,7 +33,7 @@ namespace NuGet.PackageManagement.VisualStudio
                         {
                             await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                            _projectName = EnvDTEProjectInfoUtility.GetName(EnvDTEProject);
+                            _projectName =VsProjectAdapter.ProjectName;
                         });
                 }
                 return _projectName;
@@ -52,7 +52,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    await EnvDTEProjectUtility.GetProjectItemsAsync(EnvDTEProject, Path.GetDirectoryName(path), createIfNotExists: true);
+                    await VsProjectAdapter.GetProjectItemsAsync(Path.GetDirectoryName(path), createIfNotExists: true);
                     base.AddFile(path, stream);
                 });
         }
@@ -69,7 +69,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    await EnvDTEProjectUtility.GetProjectItemsAsync(EnvDTEProject, Path.GetDirectoryName(path), createIfNotExists: true);
+                    await VsProjectAdapter.GetProjectItemsAsync(Path.GetDirectoryName(path), createIfNotExists: true);
                     base.AddFile(path, writeToStream);
                 });
         }
@@ -87,7 +87,7 @@ namespace NuGet.PackageManagement.VisualStudio
             string fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
 
             // Add the file to project or folder
-            EnvDTEProjectItems container = await EnvDTEProjectUtility.GetProjectItemsAsync(EnvDTEProject, folderPath, createIfNotExists: true);
+            EnvDTEProjectItems container = await VsProjectAdapter.GetProjectItemsAsync(folderPath, createIfNotExists: true);
             if (container == null)
             {
                 throw new ArgumentException(

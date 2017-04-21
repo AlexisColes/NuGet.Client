@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using NuGet.ProjectManagement;
+using NuGet.VisualStudio;
 
 namespace NuGet.PackageManagement.VisualStudio
 {
@@ -18,6 +19,6 @@ namespace NuGet.PackageManagement.VisualStudio
         /// <param name="context">Context used to create a new project instance.</param>
         /// <param name="result">New instance if instantiation succeeds, null otherwise.</param>
         /// <returns>True if operation has succeeded.</returns>
-        bool TryCreateNuGetProject(EnvDTE.Project project, ProjectSystemProviderContext context, out NuGetProject result);
+        bool TryCreateNuGetProject(IVsProjectAdapter project, ProjectSystemProviderContext context, out NuGetProject result);
     }
 }

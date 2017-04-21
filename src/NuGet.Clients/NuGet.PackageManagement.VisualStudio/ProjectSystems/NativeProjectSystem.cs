@@ -12,8 +12,8 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public class NativeProjectSystem : CpsProjectSystem
     {
-        public NativeProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
-            : base(envDTEProject, nuGetProjectContext)
+        public NativeProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
+            : base(vsProjectAdapter, nuGetProjectContext)
         {
         }
 
@@ -31,10 +31,10 @@ namespace NuGet.PackageManagement.VisualStudio
 
             await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             // Get the project items for the folder path
-            string folderPath = Path.GetDirectoryName(path);
-            string fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
+            var folderPath = Path.GetDirectoryName(path);
+            var fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
 
-            VCProjectHelper.AddFileToProject(EnvDTEProject.Object, fullPath, folderPath);
+            VCProjectHelper.AddFileToProject(VsProjectAdapter.DteProject.Object, fullPath, folderPath);
 
             NuGetProjectContext.Log(ProjectManagement.MessageLevel.Debug, Strings.Debug_AddedFileToProject, path, ProjectName);
         }
@@ -57,18 +57,18 @@ namespace NuGet.PackageManagement.VisualStudio
                 return;
             }
 
-            string folderPath = Path.GetDirectoryName(path);
-            string fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
+            var folderPath = Path.GetDirectoryName(path);
+            var fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
 
             bool succeeded;
-            succeeded = VCProjectHelper.RemoveFileFromProject(EnvDTEProject.Object, fullPath, folderPath);
+            succeeded = VCProjectHelper.RemoveFileFromProject(VsProjectAdapter.DteProject.Object, fullPath, folderPath);
             if (succeeded)
             {
                 // The RemoveFileFromProject() method only removes file from project.
                 // We want to delete it from disk too.
                 FileSystemUtility.DeleteFileAndParentDirectoriesIfEmpty(ProjectFullPath, path, NuGetProjectContext);
 
-                if (!String.IsNullOrEmpty(folderPath))
+                if (!string.IsNullOrEmpty(folderPath))
                 {
                     NuGetProjectContext.Log(ProjectManagement.MessageLevel.Debug, Strings.Debug_RemovedFileFromFolder, Path.GetFileName(path), folderPath);
                 }

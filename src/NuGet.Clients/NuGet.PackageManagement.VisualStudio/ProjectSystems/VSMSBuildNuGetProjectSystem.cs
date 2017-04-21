@@ -34,9 +34,9 @@ namespace NuGet.PackageManagement.VisualStudio
         private const string NuGetImportStamp = "NuGetPackageImportStamp";
         private IVsProjectBuildSystem _buildSystem;
 
-        public VSMSBuildNuGetProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
+        public VSMSBuildNuGetProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
         {
-            if (envDTEProject == null)
+            if (vsProjectAdapter == null)
             {
                 throw new ArgumentNullException("envDTEProject");
             }
@@ -46,11 +46,11 @@ namespace NuGet.PackageManagement.VisualStudio
                 throw new ArgumentNullException("nuGetProjectContext");
             }
 
-            EnvDTEProject = envDTEProject;
+            VsProjectAdapter = vsProjectAdapter;
             NuGetProjectContext = nuGetProjectContext;
         }
 
-        public EnvDTEProject EnvDTEProject { get; }
+        public IVsProjectAdapter VsProjectAdapter { get; }
 
         public INuGetProjectContext NuGetProjectContext { get; private set; }
 
@@ -75,7 +75,7 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 if (_buildSystem == null)
                 {
-                    _buildSystem = EnvDTEProjectUtility.GetVsProjectBuildSystem(EnvDTEProject);
+                    _buildSystem = VsProjectAdapter.ProjectBuildSystem;
                 }
 
                 return _buildSystem;
@@ -96,7 +96,7 @@ namespace NuGet.PackageManagement.VisualStudio
                     NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
                     {
                         await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        _projectFullPath = EnvDTEProjectInfoUtility.GetFullPath(EnvDTEProject);
+                        _projectFullPath = VsProjectAdapter.FullPath;
                     });
                 }
 
@@ -119,7 +119,7 @@ namespace NuGet.PackageManagement.VisualStudio
                     {
                         await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                        _projectFileFullPath = EnvDTEProjectInfoUtility.GetFullProjectPath(EnvDTEProject);
+                        _projectFileFullPath = VsProjectAdapter.FullProjectPath;
                     });
                 }
 
@@ -133,12 +133,12 @@ namespace NuGet.PackageManagement.VisualStudio
         {
             get
             {
-                if (String.IsNullOrEmpty(_projectName))
+                if (string.IsNullOrEmpty(_projectName))
                 {
                     NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
                     {
                         await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        _projectName = EnvDTEProject.Name;
+                        _projectName = VsProjectAdapter.ProjectName;
                     });
                 }
                 return _projectName;
@@ -151,12 +151,12 @@ namespace NuGet.PackageManagement.VisualStudio
         {
             get
             {
-                if (String.IsNullOrEmpty(_projectCustomUniqueName))
+                if (string.IsNullOrEmpty(_projectCustomUniqueName))
                 {
                     NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
                         {
                             await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                            _projectCustomUniqueName = EnvDTEProjectInfoUtility.GetCustomUniqueName(EnvDTEProject);
+                            _projectCustomUniqueName = VsProjectAdapter.CustomUniqueName;
                         });
                 }
 
@@ -175,7 +175,7 @@ namespace NuGet.PackageManagement.VisualStudio
                     NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
                         {
                             await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                            _targetFramework = EnvDTEProjectInfoUtility.GetTargetNuGetFramework(EnvDTEProject);
+                            _targetFramework = VsProjectAdapter.GetTargetNuGetFramework();
                         });
                 }
 
@@ -194,7 +194,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 return NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    return EnvDTEProject.Object as VSProject4;
+                    return VsProjectAdapter.DteProject.Object as VSProject4;
                 });
 #endif
             }
@@ -235,7 +235,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 return Task.FromResult(false);
             }
 
-            bool fileExistsInProject = FileExistsInProject(path);
+            var fileExistsInProject = FileExistsInProject(path);
 
             // If the file exists on disk but not in the project then skip it.
             // One exception is the 'packages.config' file, in which case we want to include
@@ -253,7 +253,7 @@ namespace NuGet.PackageManagement.VisualStudio
             }
             else
             {
-                EnvDTEProjectUtility.EnsureCheckedOutIfExists(EnvDTEProject, ProjectFullPath, path);
+                VsProjectAdapter.EnsureCheckedOutIfExists(ProjectFullPath, path);
                 addFile();
                 if (!fileExistsInProject)
                 {
@@ -270,7 +270,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
             if (!File.Exists(fullPath))
             {
-                throw new ArgumentNullException(String.Format(CultureInfo.CurrentCulture, Strings.PathToExistingFileNotPresent, fullPath, ProjectName));
+                throw new ArgumentNullException(string.Format(CultureInfo.CurrentCulture, Strings.PathToExistingFileNotPresent, fullPath, ProjectName));
             }
 
             NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
@@ -305,10 +305,10 @@ namespace NuGet.PackageManagement.VisualStudio
             }
 
             // Get the project items for the folder path
-            string folderPath = Path.GetDirectoryName(path);
-            string fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
+            var folderPath = Path.GetDirectoryName(path);
+            var fullPath = FileSystemUtility.GetFullPath(ProjectFullPath, path);
 
-            var container = await EnvDTEProjectUtility.GetProjectItemsAsync(EnvDTEProject, folderPath, createIfNotExists: true);
+            var container = await VsProjectAdapter.GetProjectItemsAsync(folderPath, createIfNotExists: true);
 
             // Add the file to project or folder
             AddFileToContainer(fullPath, folderPath, container);
@@ -342,7 +342,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     if (IsReferenceUnavailableException(e))
                     {
-                        var frameworkName = EnvDTEProjectInfoUtility.GetDotNetFrameworkName(EnvDTEProject);
+                        var frameworkName = VsProjectAdapter.GetDotNetFrameworkName();
 
                         if (FrameworkAssemblyResolver.IsFrameworkFacade(name, frameworkName))
                         {
@@ -351,7 +351,7 @@ namespace NuGet.PackageManagement.VisualStudio
                         }
                     }
 
-                    throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture, Strings.FailedToAddGacReference, packageId, name), e);
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Strings.FailedToAddGacReference, packageId, name), e);
                 }
             });
         }
@@ -363,12 +363,12 @@ namespace NuGet.PackageManagement.VisualStudio
         {
             Debug.Assert(ThreadHelper.CheckAccess());
 
-            EnvDTEProjectUtility.GetReferences(EnvDTEProject).Add(name);
+            VsProjectAdapterUtility.GetReferences(VsProjectAdapter).Add(name);
         }
 
         public virtual void AddImport(string targetFullPath, ImportLocation location)
         {
-            if (String.IsNullOrEmpty(targetFullPath))
+            if (string.IsNullOrEmpty(targetFullPath))
             {
                 throw new ArgumentNullException(CommonResources.Argument_Cannot_Be_Null_Or_Empty, "targetPath");
             }
@@ -377,12 +377,12 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                string relativeTargetPath = PathUtility.GetRelativePath(PathUtility.EnsureTrailingSlash(ProjectFullPath), targetFullPath);
-                EnvDTEProjectUtility.AddImportStatement(EnvDTEProject, relativeTargetPath, location);
-                EnvDTEProjectUtility.Save(EnvDTEProject);
+                var relativeTargetPath = PathUtility.GetRelativePath(PathUtility.EnsureTrailingSlash(ProjectFullPath), targetFullPath);
+                VsProjectAdapter.AddImportStatement(relativeTargetPath, location);
+                VsProjectAdapter.Save();
 
                 // notify the project system of the change
-                UpdateImportStamp(EnvDTEProject);
+                UpdateImportStamp(VsProjectAdapter);
             });
         }
 
@@ -412,13 +412,13 @@ namespace NuGet.PackageManagement.VisualStudio
                     // Read DTE properties from the UI thread
                     projectFullPath = ProjectFullPath;
                     projectName = ProjectName;
-                    dteProjectFullName = EnvDTEProject.FullName;
+                    dteProjectFullName = VsProjectAdapter.FullName;
 
                     // Get the full path to the reference
                     assemblyFullPath = Path.Combine(projectFullPath, referencePath);
 
                     // Add a reference to the project
-                    var references = EnvDTEProjectUtility.GetReferences(EnvDTEProject);
+                    var references = VsProjectAdapterUtility.GetReferences(VsProjectAdapter);
 
                     dynamic reference = references.Add(assemblyFullPath);
 
@@ -479,7 +479,7 @@ namespace NuGet.PackageManagement.VisualStudio
                                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                                 // Save the project after we've modified it.
-                                EnvDTEProject.Save();
+                                VsProjectAdapter.Save();
                             });
                         }
                     }
@@ -548,11 +548,11 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                var deleteProjectItem = await EnvDTEProjectUtility.DeleteProjectItemAsync(EnvDTEProject, path);
+                var deleteProjectItem = await VsProjectAdapter.DeleteProjectItemAsync(path);
                 if (deleteProjectItem)
                 {
-                    string folderPath = Path.GetDirectoryName(path);
-                    if (!String.IsNullOrEmpty(folderPath))
+                    var folderPath = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(folderPath))
                     {
                         NuGetProjectContext.Log(ProjectManagement.MessageLevel.Debug, Strings.Debug_RemovedFileFromFolder, Path.GetFileName(path), folderPath);
                     }
@@ -572,14 +572,14 @@ namespace NuGet.PackageManagement.VisualStudio
 
                 try
                 {
-                    string referenceName = name;
+                    var referenceName = name;
                     if (ProjectManagement.Constants.AssemblyReferencesExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase))
                     {
                         // Get the reference name without extension
                         referenceName = Path.GetFileNameWithoutExtension(name);
                     }
 
-                    return EnvDTEProjectUtility.GetReferences(EnvDTEProject).Item(referenceName) != null;
+                    return VsProjectAdapterUtility.GetReferences(VsProjectAdapter).Item(referenceName) != null;
                 }
                 catch
                 {
@@ -590,7 +590,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
         public virtual void RemoveImport(string targetFullPath)
         {
-            if (String.IsNullOrEmpty(targetFullPath))
+            if (string.IsNullOrEmpty(targetFullPath))
             {
                 throw new ArgumentNullException(CommonResources.Argument_Cannot_Be_Null_Or_Empty, "targetPath");
             }
@@ -599,13 +599,13 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                string relativeTargetPath = PathUtility.GetRelativePath(PathUtility.EnsureTrailingSlash(ProjectFullPath), targetFullPath);
-                EnvDTEProjectUtility.RemoveImportStatement(EnvDTEProject, relativeTargetPath);
+                var relativeTargetPath = PathUtility.GetRelativePath(PathUtility.EnsureTrailingSlash(ProjectFullPath), targetFullPath);
+                VsProjectAdapter.RemoveImportStatement(relativeTargetPath);
 
-                EnvDTEProjectUtility.Save(EnvDTEProject);
+                VsProjectAdapter.Save();
 
                 // notify the project system of the change
-                UpdateImportStamp(EnvDTEProject);
+                UpdateImportStamp(VsProjectAdapter);
             });
         }
 
@@ -618,7 +618,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 try
                 {
                     // Get the reference name without extension
-                    string referenceName = Path.GetFileNameWithoutExtension(name);
+                    var referenceName = Path.GetFileNameWithoutExtension(name);
 
                     // Remove the reference from the project
                     // NOTE:- Project.Object.References.Item requires Reference.Identity
@@ -627,7 +627,7 @@ namespace NuGet.PackageManagement.VisualStudio
                     //        almost all the assemblies since Assembly Name is the same as the assembly file name
                     //        In case of F#, the input parameter is case-sensitive as well
                     //        Hence, an override to THIS function is added to take care of that
-                    var reference = EnvDTEProjectUtility.GetReferences(EnvDTEProject).Item(referenceName);
+                    var reference = VsProjectAdapterUtility.GetReferences(VsProjectAdapter).Item(referenceName);
                     if (reference != null)
                     {
                         reference.Remove();
@@ -722,7 +722,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    var containsFile = await EnvDTEProjectUtility.ContainsFile(EnvDTEProject, path);
+                    var containsFile = await VsProjectAdapter.ContainsFile(path);
                     return containsFile;
                 });
         }
@@ -733,19 +733,7 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                try
-                {
-                    EnvDTEProperty envDTEProperty = EnvDTEProject.Properties.Item(propertyName);
-                    if (envDTEProperty != null)
-                    {
-                        return envDTEProperty.Value;
-                    }
-                }
-                catch (ArgumentException)
-                {
-                    // If the property doesn't exist this will throw an argument exception
-                }
-                return null;
+                return VsProjectAdapter.GetPropertyValue(propertyName);
             });
         }
 
@@ -753,7 +741,7 @@ namespace NuGet.PackageManagement.VisualStudio
         {
             // Need NOT be on the UI thread
 
-            string fileName = Path.GetFileName(path);
+            var fileName = Path.GetFileName(path);
 
             // exclude all file names with the pattern as "web.*.config",
             // e.g. web.config, web.release.config, web.debug.config
@@ -772,15 +760,15 @@ namespace NuGet.PackageManagement.VisualStudio
         /// of date.
         /// The value does not matter, it just needs to change.
         /// </summary>
-        protected static void UpdateImportStamp(EnvDTEProject envDTEProject)
+        protected static void UpdateImportStamp(IVsProjectAdapter vsProjectAdapter)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            IVsBuildPropertyStorage propStore = VsHierarchyUtility.ToVsHierarchy(envDTEProject) as IVsBuildPropertyStorage;
+            var propStore = vsProjectAdapter.IVsHierarchy as IVsBuildPropertyStorage;
             if (propStore != null)
             {
                 // <NuGetPackageImportStamp>af617720</NuGetPackageImportStamp>
-                string stamp = Guid.NewGuid().ToString().Split('-')[0];
+                var stamp = Guid.NewGuid().ToString().Split('-')[0];
                 try
                 {
                     propStore.SetPropertyValue(NuGetImportStamp, string.Empty, (uint)_PersistStorageType.PST_PROJECT_FILE, stamp);
@@ -835,14 +823,14 @@ namespace NuGet.PackageManagement.VisualStudio
                         if (IsBindingRedirectSupported && VSSolutionManager != null)
                         {
                             await RuntimeHelpers.AddBindingRedirectsAsync(VSSolutionManager,
-                                EnvDTEProject,
+                                VsProjectAdapter,
                                 VSFrameworkMultiTargeting,
                                 NuGetProjectContext);
                         }
                     }
                     catch (Exception ex)
                     {
-                        var fileName = EnvDTEProjectInfoUtility.GetFullPath(EnvDTEProject);
+                        var fileName = VsProjectAdapter.FullPath;
 
                         var level = behavior.FailOperations ?
                             ProjectManagement.MessageLevel.Error :
@@ -882,7 +870,7 @@ namespace NuGet.PackageManagement.VisualStudio
         {
             if (ScriptExecutor != null)
             {
-                return ScriptExecutor.ExecuteAsync(identity, packageInstallPath, scriptRelativePath, EnvDTEProject, NuGetProjectContext, throwOnFailure);
+                return ScriptExecutor.ExecuteAsync(identity, packageInstallPath, scriptRelativePath, VsProjectAdapter.DteProject, NuGetProjectContext, throwOnFailure);
             }
 
             return Task.FromResult(false);
@@ -922,7 +910,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 // Workaround for TFS update issue. If we're bound to TFS, do not try and delete directories.
                 if (SourceControlUtility.GetSourceControlManager(NuGetProjectContext) == null)
                 {
-                    var deletedProjectItem = await EnvDTEProjectUtility.DeleteProjectItemAsync(EnvDTEProject, path);
+                    var deletedProjectItem = await VsProjectAdapter.DeleteProjectItemAsync(path);
                     if (deletedProjectItem)
                     {
                         NuGetProjectContext.Log(ProjectManagement.MessageLevel.Debug, Strings.Debug_RemovedFolder, path);
@@ -938,15 +926,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 throw new NotSupportedException();
             }
 
-            return NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var childItems = await EnvDTEProjectUtility.GetChildItems(EnvDTEProject, path, filter, VsProjectTypes.VsProjectItemKindPhysicalFile);
-                // Get all physical files
-                return from p in childItems
-                       select p.Name;
-            });
+            return VsProjectAdapter.GetChildItems(path, filter, VsProjectTypes.VsProjectItemKindPhysicalFile);
         }
 
         /// <summary>
@@ -958,47 +938,12 @@ namespace NuGet.PackageManagement.VisualStudio
         /// <returns>The list of full paths.</returns>
         public IEnumerable<string> GetFullPaths(string fileName)
         {
-            return NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var paths = new List<string>();
-                var projectItemsQueue = new Queue<EnvDTEProjectItems>();
-                projectItemsQueue.Enqueue(EnvDTEProject.ProjectItems);
-                while (projectItemsQueue.Count > 0)
-                {
-                    var items = projectItemsQueue.Dequeue();
-                    foreach (EnvDTE.ProjectItem item in items)
-                    {
-                        if (item.Kind == VsProjectTypes.VsProjectItemKindPhysicalFile)
-                        {
-                            if (StringComparer.OrdinalIgnoreCase.Equals(item.Name, fileName))
-                            {
-                                paths.Add(item.FileNames[1]);
-                            }
-                        }
-                        else if (item.Kind == VsProjectTypes.VsProjectItemKindPhysicalFolder)
-                        {
-                            projectItemsQueue.Enqueue(item.ProjectItems);
-                        }
-                    }
-                }
-
-                return paths;
-            });
+            return VsProjectAdapter.GetFullPaths(fileName);
         }
 
         public virtual IEnumerable<string> GetDirectories(string path)
         {
-            return NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var childItems = await EnvDTEProjectUtility.GetChildItems(EnvDTEProject, path, "*.*", VsProjectTypes.VsProjectItemKindPhysicalFolder);
-                // Get all physical folders
-                return from p in childItems
-                       select p.Name;
-            });
+            return VsProjectAdapter.GetChildItems(path, "*.*", VsProjectTypes.VsProjectItemKindPhysicalFolder);
         }
 
         private static bool IsReferenceUnavailableException(Exception e)

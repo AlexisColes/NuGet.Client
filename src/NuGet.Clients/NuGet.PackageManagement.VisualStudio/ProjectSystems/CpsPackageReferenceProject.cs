@@ -37,7 +37,7 @@ namespace NuGet.PackageManagement.VisualStudio
         private readonly string _projectFullPath;
 
         private readonly IProjectSystemCache _projectSystemCache;
-        private readonly EnvDTEProject _envDTEProject;
+        private readonly IVsProjectAdapter _vsProjectAdapter;
         private readonly UnconfiguredProject _unconfiguredProject;
         private IScriptExecutor _scriptExecutor;
 
@@ -46,7 +46,7 @@ namespace NuGet.PackageManagement.VisualStudio
             string projectUniqueName,
             string projectFullPath,
             IProjectSystemCache projectSystemCache,
-            EnvDTEProject envDTEProject,
+            IVsProjectAdapter vsProjectAdapter,
             UnconfiguredProject unconfiguredProject,
             string projectId)
         {
@@ -65,7 +65,7 @@ namespace NuGet.PackageManagement.VisualStudio
             _projectFullPath = projectFullPath;
 
             _projectSystemCache = projectSystemCache;
-            _envDTEProject = envDTEProject;
+            _vsProjectAdapter = vsProjectAdapter;
             _unconfiguredProject = unconfiguredProject;
 
             InternalMetadata.Add(NuGetProjectMetadataKeys.Name, _projectName);
@@ -96,7 +96,7 @@ namespace NuGet.PackageManagement.VisualStudio
             return
                 await
                     ScriptExecutorUtil.ExecuteScriptAsync(identity, packageInstallPath, projectContext, ScriptExecutor,
-                        _envDTEProject, throwOnFailure);
+                        _vsProjectAdapter.DteProject, throwOnFailure);
         }
 
         public override async Task<String> GetAssetsFilePathAsync()

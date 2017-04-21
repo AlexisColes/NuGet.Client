@@ -4,14 +4,14 @@
 using System;
 using System.IO;
 using NuGet.ProjectManagement;
-using EnvDTEProject = EnvDTE.Project;
+using NuGet.VisualStudio;
 
 namespace NuGet.PackageManagement.VisualStudio
 {
     public class WebProjectSystem : VSMSBuildNuGetProjectSystem
     {
-        public WebProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
-            : base(envDTEProject, nuGetProjectContext)
+        public WebProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
+            : base(vsProjectAdapter, nuGetProjectContext)
         {
         }
 

@@ -183,14 +183,14 @@ namespace NuGetVSExtension
         [SuppressMessage("Microsoft.VisualStudio.Threading.Analyzers", "VSTHRD010", Justification = "NuGet/Home#4833 Baseline")]
         private void SolutionManager_NuGetProjectRenamed(object sender, NuGetProjectEventArgs e)
         {
-            var project = SolutionManager.GetDTEProject(SolutionManager.GetNuGetProjectSafeName(e.NuGetProject));
-            var windowFrame = FindExistingWindowFrame(project);
+            var project = SolutionManager.GetVsProjectAdapter(SolutionManager.GetNuGetProjectSafeName(e.NuGetProject));
+            var windowFrame = FindExistingWindowFrame(project.DteProject);
             if (windowFrame != null)
             {
                 windowFrame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, String.Format(
                     CultureInfo.CurrentCulture,
                     Resx.Label_NuGetWindowCaption,
-                    project.Name));
+                    project.ProjectName));
             }
         }
 

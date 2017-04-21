@@ -18,8 +18,8 @@ namespace NuGet.PackageManagement.VisualStudio
 {
     public class FSharpProjectSystem : VSMSBuildNuGetProjectSystem
     {
-        public FSharpProjectSystem(EnvDTEProject envDTEProject, INuGetProjectContext nuGetProjectContext)
-            : base(envDTEProject, nuGetProjectContext)
+        public FSharpProjectSystem(IVsProjectAdapter vsProjectAdapter, INuGetProjectContext nuGetProjectContext)
+            : base(vsProjectAdapter, nuGetProjectContext)
         {
         }
 
@@ -55,7 +55,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    EnvDTEProjectItem projectItem = await EnvDTEProjectUtility.GetProjectItemAsync(EnvDTEProject, path);
+                    EnvDTEProjectItem projectItem = await VsProjectAdapter.GetProjectItemAsync(path);
                     return (projectItem != null);
                 });
         }
@@ -73,7 +73,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 {
                     await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    RemoveReferenceCore(name, EnvDTEProjectUtility.GetReferences(EnvDTEProject));
+                    RemoveReferenceCore(name, VsProjectAdapterUtility.GetReferences(VsProjectAdapter));
                 });
         }
 

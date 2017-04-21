@@ -122,7 +122,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 EnvDTE.ProjectItem item = await GetProjectItemAsync(envDTEProject, path);
                 return item != null;
             }
-            IVsProject vsProject = (IVsProject)VsHierarchyUtility.ToVsHierarchy(envDTEProject);
+            var vsProject = (IVsProject)VsHierarchyUtility.ToVsHierarchy(envDTEProject);
             if (vsProject == null)
             {
                 return false;
@@ -136,7 +136,7 @@ namespace NuGet.PackageManagement.VisualStudio
                 // REVIEW: We want to revisit this after RTM - the code in this if statement should be applied to every project type.
                 // We're checking for VSDOCUMENTPRIORITY.DP_Standard here to see if the file is included in the project.
                 // Original check (outside of if) did not have this.
-                VSDOCUMENTPRIORITY[] priority = new VSDOCUMENTPRIORITY[1];
+                var priority = new VSDOCUMENTPRIORITY[1];
                 int hr = vsProject.IsDocumentInProject(path, out pFound, priority, out itemId);
                 return ErrorHandler.Succeeded(hr) && pFound == 1 && priority[0] >= VSDOCUMENTPRIORITY.DP_Standard;
             }

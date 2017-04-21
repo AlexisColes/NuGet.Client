@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Shell;
 using NuGet.ProjectManagement;
 using Microsoft.VisualStudio.Utilities;
 using System.ComponentModel.Composition;
+using NuGet.VisualStudio;
 
 namespace NuGet.PackageManagement.VisualStudio
 {
@@ -35,11 +36,11 @@ namespace NuGet.PackageManagement.VisualStudio
                 .ToArray();
         }
 
-        public bool TryCreateNuGetProject(EnvDTE.Project dteProject, ProjectSystemProviderContext context, out NuGetProject result)
+        public bool TryCreateNuGetProject(IVsProjectAdapter vsProjectAdapter, ProjectSystemProviderContext context, out NuGetProject result)
         {
-            if (dteProject == null)
+            if (vsProjectAdapter == null)
             {
-                throw new ArgumentNullException(nameof(dteProject));
+                throw new ArgumentNullException(nameof(vsProjectAdapter));
             }
 
             if (context == null)
@@ -56,7 +57,7 @@ namespace NuGet.PackageManagement.VisualStudio
                     try
                     {
                         NuGetProject nuGetProject;
-                        if (p.TryCreateNuGetProject(dteProject, context, out nuGetProject))
+                        if (p.TryCreateNuGetProject(vsProjectAdapter, context, out nuGetProject))
                         {
                             return nuGetProject;
                         }

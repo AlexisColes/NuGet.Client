@@ -29,6 +29,8 @@ namespace NuGet.Common
         /// <summary>
         /// Contains the list of Target Frameworks or Runtime Identifiers for which the error was generated.
         /// </summary>
-        List<string> TfmOrRid { get; set; }
+        List<string> TfmOrRidList { get; set; }
+
+        string ToString();
     }
 }

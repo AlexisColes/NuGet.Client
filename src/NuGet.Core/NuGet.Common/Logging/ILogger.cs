@@ -25,6 +25,5 @@ namespace NuGet.Common
         
         void LogErrorSummary(string data);
 
-        void LogError(INuGetError error);
     }
 }

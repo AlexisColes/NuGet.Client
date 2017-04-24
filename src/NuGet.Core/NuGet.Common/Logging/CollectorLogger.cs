@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace NuGet.Common
 {
@@ -61,16 +62,17 @@ namespace NuGet.Common
             _innerLogger.LogErrorSummary(data);
         }
 
-        public void LogError(ILogMessage error)
+        public void Log(ILogMessage message)
         {
-            _innerLogger.LogError(error.ToString());
-            _errors.Enqueue(error);
+            _innerLogger.LogError(message.FormatMessage());
+            _errors.Enqueue(message);
         }
 
-        public void LogWarning(ILogMessage warning)
+        public async Task LogAsync(ILogMessage message)
         {
-            _innerLogger.LogWarning(warning.ToString());
-            _errors.Enqueue(warning);
+            var messageString = await message.FormatMessageAsync();
+            _innerLogger.LogError(messageString);
+            _errors.Enqueue(message);
         }
 
         public IEnumerable<ILogMessage> Errors => _errors.ToArray();

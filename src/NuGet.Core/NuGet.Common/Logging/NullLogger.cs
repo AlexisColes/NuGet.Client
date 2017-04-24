@@ -1,6 +1,9 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
+using System.Threading.Tasks;
+
 namespace NuGet.Common
 {
     public class NullLogger : ILogger
@@ -35,5 +38,9 @@ namespace NuGet.Common
         public void LogInformationSummary(string data) { }
         
         public void LogErrorSummary(string data) { }
+
+        public void Log(ILogMessage message) { }
+
+        public Task LogAsync(ILogMessage message) { return Task.FromResult(0); }
     }
 }

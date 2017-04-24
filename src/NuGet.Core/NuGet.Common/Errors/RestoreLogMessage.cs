@@ -5,7 +5,7 @@ using System.Text;
 
 namespace NuGet.Common
 {
-    public class RestoreLogMessage : ILogMessage
+    public class RestoreLogMessage : IAssetsLogMessage
     {
         public LogLevel Level { get; set; }
         public NuGetLogCode Code { get; set; }

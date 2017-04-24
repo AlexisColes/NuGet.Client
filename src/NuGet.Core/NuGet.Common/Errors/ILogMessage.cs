@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NuGet.Common
 {
@@ -31,6 +32,18 @@ namespace NuGet.Common
         /// </summary>
         DateTimeOffset Time { get; set; }
 
+        /// <summary>
+        /// Converts the ILogMessage into a string that can be logged as-is into a Console.
+        /// </summary>
+        /// <returns>The string representation of the ILogMessage.</returns>
+        //TODO consider passing verbosity
         string FormatMessage();
+
+        /// <summary>
+        /// Converts the ILogMessage into a string that can be logged as-is into a Console.
+        /// </summary>
+        /// <returns>The string representation of the ILogMessage.</returns>
+        //TODO consider passing verbosity
+        Task<string> FormatMessageAsync();
     }
 }

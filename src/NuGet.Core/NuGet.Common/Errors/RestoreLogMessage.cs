@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NuGet.Common
 {
@@ -50,12 +51,12 @@ namespace NuGet.Common
             }
         }
 
-        public Dictionary<string, object> ToDictionary()
+        public IDictionary<string, object> ToDictionary()
         {
             var errorDictionary = new Dictionary<string, object>
             {
-                [LogMessageProperties.LOG_CODE_PROPERTY] = nameof(Code),
-                [LogMessageProperties.LOG_LEVEL_PROPERTY] = $"{Level}"
+                [LogMessageProperties.LOG_CODE_PROPERTY] = Code,
+                [LogMessageProperties.LOG_LEVEL_PROPERTY] = Level  //TODO write an adapter for converting into msbuild style levels
             };
 
             if(Message != null)
@@ -78,6 +79,12 @@ namespace NuGet.Common
             return errorDictionary;
         }
 
+
+        public Task<IDictionary<string, object>> ToDictionaryAsync()
+        {
+            return Task.FromResult(ToDictionary());
+        }
+
         public string FormatMessage()
         {
             var errorString = new StringBuilder();
@@ -85,6 +92,11 @@ namespace NuGet.Common
             errorString.Append($"{nameof(Code)}:{Message}");
 
             return errorString.ToString();
+        }
+
+        public Task<string> FormatMessageAsync()
+        {
+            return Task.FromResult(FormatMessage());
         }
     }
 }

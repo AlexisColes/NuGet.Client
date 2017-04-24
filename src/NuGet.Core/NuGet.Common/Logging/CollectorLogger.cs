@@ -10,7 +10,7 @@ namespace NuGet.Common
     public class CollectorLogger : ICollectorLogger
     {
         private readonly ILogger _innerLogger;
-        private readonly ConcurrentQueue<INuGetError> _errors;
+        private readonly ConcurrentQueue<ILogMessage> _errors;
 
         /// <summary>
         /// Initializes an instance of the <see cref="CollectorLogger"/>, while still
@@ -19,7 +19,7 @@ namespace NuGet.Common
         public CollectorLogger(ILogger innerLogger)
         {
             _innerLogger = innerLogger;
-            _errors = new ConcurrentQueue<INuGetError>();
+            _errors = new ConcurrentQueue<ILogMessage>();
         }
         
         public void LogDebug(string data)
@@ -61,18 +61,18 @@ namespace NuGet.Common
             _innerLogger.LogErrorSummary(data);
         }
 
-        public void LogError(INuGetError error)
+        public void LogError(ILogMessage error)
         {
             _innerLogger.LogError(error.ToString());
             _errors.Enqueue(error);
         }
 
-        public void LogWarning(INuGetError warning)
+        public void LogWarning(ILogMessage warning)
         {
             _innerLogger.LogWarning(warning.ToString());
             _errors.Enqueue(warning);
         }
 
-        public IEnumerable<INuGetError> Errors => _errors.ToArray();
+        public IEnumerable<ILogMessage> Errors => _errors.ToArray();
     }
 }

@@ -299,7 +299,7 @@ namespace NuGet.Commands
                 summaryRequest.InputPath,
                 summaryRequest.Settings,
                 summaryRequest.Sources,
-                summaryRequest.CollectorLogger.Errors.Select(e => e as RestoreError));
+                summaryRequest.CollectorLogger.Errors.Select(e => e as RestoreLogMessage));
         }
 
         private static async Task<RestoreSummary> CompleteTaskAsync(List<Task<RestoreSummary>> restoreTasks)

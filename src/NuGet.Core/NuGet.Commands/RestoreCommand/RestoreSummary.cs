@@ -23,7 +23,7 @@ namespace NuGet.Commands
 
         public int InstallCount { get; }
 
-        public IList<RestoreError> Errors { get; }
+        public IList<RestoreLogMessage> Errors { get; }
 
         public RestoreSummary(bool success)
         {
@@ -32,7 +32,7 @@ namespace NuGet.Commands
             ConfigFiles = new List<string>().AsReadOnly();
             FeedsUsed = new List<string>().AsReadOnly();
             InstallCount = 0;
-            Errors = new List<RestoreError>().AsReadOnly();
+            Errors = new List<RestoreLogMessage>().AsReadOnly();
         }
 
         public RestoreSummary(
@@ -40,7 +40,7 @@ namespace NuGet.Commands
             string inputPath,
             ISettings settings,
             IEnumerable<SourceRepository> sourceRepositories,
-            IEnumerable<RestoreError> errors)
+            IEnumerable<RestoreLogMessage> errors)
         {
             Success = result.Success;
             InputPath = inputPath;
@@ -63,7 +63,7 @@ namespace NuGet.Commands
             IEnumerable<string> configFiles,
             IEnumerable<string> feedsUsed,
             int installCount,
-            IEnumerable<RestoreError> errors)
+            IEnumerable<RestoreLogMessage> errors)
         {
             Success = success;
             InputPath = inputPath;

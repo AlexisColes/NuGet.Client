@@ -12,13 +12,15 @@ namespace NuGet.Protocol.Core.Types
     /// </summary>
     public class DownloadResourceResult : IDisposable
     {
+        private bool _isDisposed;
         private readonly Stream _stream;
         private readonly PackageReaderBase _packageReader;
         private readonly string _packageSource;
 
         public DownloadResourceResult(DownloadResourceResultStatus status)
         {
-            if (status == DownloadResourceResultStatus.Available)
+            if (status == DownloadResourceResultStatus.Available ||
+                status == DownloadResourceResultStatus.AvailableWithoutStream)
             {
                 throw new ArgumentException("A stream should be provided when the result is available.",
                     nameof(status));
@@ -55,6 +57,18 @@ namespace NuGet.Protocol.Core.Types
         {
         }
 
+        public DownloadResourceResult(PackageReaderBase packageReader, string source)
+        {
+            if (packageReader == null)
+            {
+                throw new ArgumentNullException(nameof(packageReader));
+            }
+
+            Status = DownloadResourceResultStatus.AvailableWithoutStream;
+            _packageReader = packageReader;
+            _packageSource = source;
+        }
+
         public DownloadResourceResultStatus Status { get; }
 
         /// <summary>
@@ -75,8 +89,15 @@ namespace NuGet.Protocol.Core.Types
 
         public void Dispose()
         {
-            _stream?.Dispose();
-            _packageReader?.Dispose();
+            if (!_isDisposed)
+            {
+                _stream?.Dispose();
+                _packageReader?.Dispose();
+
+                GC.SuppressFinalize(this);
+
+                _isDisposed = true;
+            }
         }
     }
 }

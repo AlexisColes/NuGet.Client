@@ -16,13 +16,18 @@ namespace NuGet.Protocol.Tests
 {
     public class DownloadResourceResultTests
     {
-        [Fact]
-        public void Constructor_Status_ThrowsIfStatusIsAvailable()
+        [Theory]
+        [InlineData(DownloadResourceResultStatus.Available)]
+        [InlineData(DownloadResourceResultStatus.AvailableWithoutStream)]
+        public void Constructor_Status_ThrowsForInvalidStatus(DownloadResourceResultStatus status)
         {
-            var exception = Assert.Throws<ArgumentException>(
-                () => new DownloadResourceResult(DownloadResourceResultStatus.Available));
+            var exception = Assert.Throws<ArgumentException>(() => new DownloadResourceResult(status));
+
+            var expectedMessage = $"A stream should be provided when the result is available.{Environment.NewLine}"
+                + "Parameter name: status";
 
             Assert.Equal("status", exception.ParamName);
+            Assert.Equal(expectedMessage, exception.Message);
         }
 
         [Theory]
@@ -36,6 +41,38 @@ namespace NuGet.Protocol.Tests
                 Assert.Null(result.PackageSource);
                 Assert.Null(result.PackageStream);
                 Assert.Equal(status, result.Status);
+            }
+        }
+
+        [Fact]
+        public void Constructor_PackageReaderSource_ThrowsForNullPackageReader()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(
+                () => new DownloadResourceResult(packageReader: null, source: "a"));
+
+            Assert.Equal("packageReader", exception.ParamName);
+        }
+
+        [Fact]
+        public void Constructor_PackageReaderSource_AllowsNullSource()
+        {
+            using (var packageReader = new TestPackageReader())
+            using (var result = new DownloadResourceResult(packageReader, source: null))
+            {
+                Assert.Null(result.PackageSource);
+            }
+        }
+
+        [Fact]
+        public void Constructor_PackageReaderSource_InitializesProperties()
+        {
+            using (var packageReader = new TestPackageReader())
+            using (var result = new DownloadResourceResult(packageReader, source: "a"))
+            {
+                Assert.Same(packageReader, result.PackageReader);
+                Assert.Equal("a", result.PackageSource);
+                Assert.Null(result.PackageStream);
+                Assert.Equal(DownloadResourceResultStatus.AvailableWithoutStream, result.Status);
             }
         }
 
@@ -159,6 +196,19 @@ namespace NuGet.Protocol.Tests
             }
         }
 
+        [Fact]
+        public void Dispose_IsIdempotent()
+        {
+            using (var stream = new TestStream())
+            using (var result = new DownloadResourceResult(stream))
+            {
+                result.Dispose();
+                result.Dispose();
+
+                Assert.Equal(1, stream.DisposeCallCount);
+            }
+        }
+
         private sealed class TestPackageReader : PackageReaderBase
         {
             public TestPackageReader()
@@ -193,6 +243,18 @@ namespace NuGet.Protocol.Tests
 
             protected override void Dispose(bool disposing)
             {
+            }
+        }
+
+        private sealed class TestStream : MemoryStream
+        {
+            internal int DisposeCallCount { get; private set; }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+
+                ++DisposeCallCount;
             }
         }
     }

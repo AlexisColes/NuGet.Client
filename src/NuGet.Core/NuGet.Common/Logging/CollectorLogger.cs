@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace NuGet.Common
 {
-    public class CollectorLogger : ICollectorLogger
+    public class CollectorLogger : LoggerBase, ICollectorLogger
     {
         private readonly ILogger _innerLogger;
         private readonly ConcurrentQueue<ILogMessage> _errors;
@@ -22,57 +22,33 @@ namespace NuGet.Common
             _innerLogger = innerLogger;
             _errors = new ConcurrentQueue<ILogMessage>();
         }
-        
-        public void LogDebug(string data)
-        {
-            _innerLogger.LogDebug(data);
-        }
 
-        public void LogVerbose(string data)
+        public override void Log(ILogMessage message)
         {
-            _innerLogger.LogVerbose(data);
-        }
-
-        public void LogInformation(string data)
-        {
-            _innerLogger.LogInformation(data);
-        }
-
-        public void LogMinimal(string data)
-        {
-            _innerLogger.LogMinimal(data);
-        }
-
-        public void LogWarning(string data)
-        {
-            _innerLogger.LogWarning(data);
-        }
-        public void LogError(string data)
-        {
-            _innerLogger.LogError(data);
-        }
-
-        public void LogInformationSummary(string data)
-        {
-            _innerLogger.LogInformationSummary(data);
-        }
-
-        public void LogErrorSummary(string data)
-        {
-            _innerLogger.LogErrorSummary(data);
-        }
-
-        public void Log(ILogMessage message)
-        {
-            _innerLogger.LogError(message.FormatMessage());
             _errors.Enqueue(message);
+            _innerLogger.Log(message);
         }
 
-        public async Task LogAsync(ILogMessage message)
-        {
-            var messageString = await message.FormatMessageAsync();
-            _innerLogger.LogError(messageString);
+        public override Task LogAsync(ILogMessage message)
+        {            
             _errors.Enqueue(message);
+            return _innerLogger.LogAsync(message);
+        }
+
+        public override void Log(LogLevel level, string data)
+        {
+            //TODO clean this
+            var message = new RestoreLogMessage(level, NuGetLogCode.Undefined, data, string.Empty, string.Empty);
+            _errors.Enqueue(message);
+            _innerLogger.Log(level, data);
+        }
+
+        public override Task LogAsync(LogLevel level, string data)
+        {
+            //TODO clean this
+            var message = new RestoreLogMessage(level, NuGetLogCode.Undefined, data, string.Empty, string.Empty);
+            _errors.Enqueue(message);
+            return _innerLogger.LogAsync(level, data);
         }
 
         public IEnumerable<ILogMessage> Errors => _errors.ToArray();

@@ -37,5 +37,5 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <Import Project="$(BuildCommonDirectory)common.targets"/>
+  <Import Project="$(BuildCommonDirectory)common.targets" />
 </Project>

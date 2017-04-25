@@ -27,6 +27,10 @@ namespace NuGet.Common
         
         void LogErrorSummary(string data);
 
+        void Log(LogLevel level, string data);
+
+        void LogAsync(LogLevel level, string data);
+
         void Log(ILogMessage message);
 
         Task LogAsync(ILogMessage message);

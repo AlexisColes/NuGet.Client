@@ -7,92 +7,53 @@ namespace NuGet.Common
 {
     public abstract class LoggerBase : ILogger
     {
-        protected void Write(string data, LogLevel level)
-        {
-            WriteMessage(data, level);
-        }
-        protected Task WriteAsync(string data, LogLevel level)
-        {
-            return new Task(() => WriteMessage(data, level));
-        }
+        public abstract void Log(ILogMessage message);
 
-        private void WriteMessage(string data, LogLevel level)
-        {
-            switch (level)
-            {
-                case LogLevel.Debug:
-                    LogDebug(data);
-                    break;
+        public abstract void Log(LogLevel level, string data);
 
-                case LogLevel.Verbose:
-                    LogVerbose(data);
-                    break;
+        public abstract Task LogAsync(ILogMessage message);
 
-                case LogLevel.Information:
-                    LogInformation(data);
-                    break;
-
-                case LogLevel.Minimal:
-                    LogMinimal(data);
-                    break;
-
-                case LogLevel.Warning:
-                    LogWarning(data);
-                    break;
-
-                case LogLevel.Error:
-                    LogError(data);
-                    break;
-            }
-        }
-        public void Log(ILogMessage message)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task LogAsync(ILogMessage message)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void LogAsync(LogLevel level, string data);
 
         public void LogDebug(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Debug, data);
         }
 
         public void LogError(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Error, data);
         }
 
         public void LogErrorSummary(string data)
         {
-            throw new NotImplementedException();
+            //TODO remove summaries
+            Log(LogLevel.Error, data);
         }
 
         public void LogInformation(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Information, data);
         }
 
         public void LogInformationSummary(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Information, data);
         }
 
         public void LogMinimal(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Minimal, data);
         }
 
         public void LogVerbose(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Verbose, data);
         }
 
         public void LogWarning(string data)
         {
-            throw new NotImplementedException();
+            Log(LogLevel.Warning, data);
         }
     }
 }

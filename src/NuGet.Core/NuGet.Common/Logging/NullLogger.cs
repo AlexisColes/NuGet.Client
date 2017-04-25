@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NuGet.Common
 {
-    public class NullLogger : ILogger
+    public class NullLogger : LoggerBase
     {
         private static ILogger _instance;
 
@@ -23,24 +23,13 @@ namespace NuGet.Common
             }
         }
 
-        public void LogDebug(string data) { }
+        public override void Log(ILogMessage message) { }
 
-        public void LogError(string data) { }
+        public override void Log(LogLevel level, string data) { }
 
-        public void LogInformation(string data) { }
+        public override Task LogAsync(ILogMessage message) { return Task.FromResult(0); }
 
-        public void LogMinimal(string data) { }
+        public override void LogAsync(LogLevel level, string data) { return Task.FromResult(0); }
 
-        public void LogVerbose(string data) { }
-
-        public void LogWarning(string data) { }
-
-        public void LogInformationSummary(string data) { }
-        
-        public void LogErrorSummary(string data) { }
-
-        public void Log(ILogMessage message) { }
-
-        public Task LogAsync(ILogMessage message) { return Task.FromResult(0); }
     }
 }

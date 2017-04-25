@@ -97,23 +97,30 @@ namespace NuGet.VisualStudio
 
             // Get the vs hierarchy as an IVsAggregatableProject to get the project type guids
             var hierarchy = ToVsHierarchy(project);
+            var projectTypeGuids = GetProjectTypeGuids(hierarchy);
+
+            if (projectTypeGuids.Length == 0 && !string.IsNullOrEmpty(project.Kind))
+            {
+                return new[] { project.Kind };
+            }
+
+            return projectTypeGuids;
+        }
+
+        public static string[] GetProjectTypeGuids(IVsHierarchy hierarchy)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             var aggregatableProject = hierarchy as IVsAggregatableProject;
             if (aggregatableProject != null)
             {
                 string projectTypeGuids;
-                int hr = aggregatableProject.GetAggregateProjectTypeGuids(out projectTypeGuids);
-
-                if (hr != VSConstants.S_OK)
-                {
-                    Marshal.ThrowExceptionForHR(hr);
-                }
+                var hr = aggregatableProject.GetAggregateProjectTypeGuids(out projectTypeGuids);
+                ErrorHandler.ThrowOnFailure(hr);
 
                 return projectTypeGuids.Split(';');
             }
-            if (!String.IsNullOrEmpty(project.Kind))
-            {
-                return new[] { project.Kind };
-            }
+
             return new string[0];
         }
 

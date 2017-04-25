@@ -24,101 +24,98 @@ namespace NuGet.PackageManagement.VisualStudio
         /// <summary>
         /// Get only the direct dependencies from a project
         /// </summary>
-        public static async Task<IReadOnlyList<ProjectRestoreReference>> GetDirectProjectReferences(
+        public static async Task<IReadOnlyList<ProjectRestoreReference>> GetDirectProjectReferencesAsync(
             EnvDTEProject project,
             IEnumerable<string> resolvedProjects,
             ILogger log)
         {
-            return await NuGetUIThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            // DTE calls need to be done from the main thread
+            await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            var results = new List<ProjectRestoreReference>();
+
+            var itemsFactory = ServiceLocator.GetInstance<IVsEnumHierarchyItemsFactory>();
+
+            // Verify ReferenceOutputAssembly
+            var excludedProjects = GetExcludedReferences(project, itemsFactory);
+            var hasMissingReferences = false;
+
+            // find all references in the project
+            foreach (var childReference in GetProjectReferences(project))
             {
-                // DTE calls need to be done from the main thread
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var results = new List<ProjectRestoreReference>();
-
-                var itemsFactory = ServiceLocator.GetInstance<IVsEnumHierarchyItemsFactory>();
-
-                // Verify ReferenceOutputAssembly
-                var excludedProjects = GetExcludedReferences(project, itemsFactory);
-                var hasMissingReferences = false;
-
-                // find all references in the project
-                foreach (var childReference in GetProjectReferences(project))
+                try
                 {
-                    try
+                    var reference3 = childReference as Reference3;
+
+                    // check if deferred projects resolved this reference, which means this is still not loaded so simply continue
+                    // We'll get this reference from deferred projects later
+                    if (reference3 != null &&
+                    resolvedProjects.Contains(reference3.Name, StringComparer.OrdinalIgnoreCase))
                     {
-                        var reference3 = childReference as Reference3;
-
-                        // check if deferred projects resolved this reference, which means this is still not loaded so simply continue
-                        // We'll get this reference from deferred projects later
-                        if (reference3 != null &&
-                        resolvedProjects.Contains(reference3.Name, StringComparer.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-
-                        // Set missing reference if
-                        // 1. reference is null OR
-                        // 2. reference is not resolved which means project is not loaded or assembly not found.
-                        else if (reference3 == null || !reference3.Resolved)
-                        {
-                            // Skip missing references and show a warning
-                            hasMissingReferences = true;
-                            continue;
-                        }
-
-                        // Skip missing references
-                        if (childReference.SourceProject != null)
-                        {
-                            if (EnvDTEProjectUtility.HasUnsupportedProjectCapability(childReference.SourceProject))
-                            {
-                                // Skip this shared project
-                                continue;
-                            }
-
-                            var childProjectPath = EnvDTEProjectInfoUtility.GetFullProjectPath(childReference.SourceProject);
-
-                            // Skip projects which have ReferenceOutputAssembly=false
-                            if (!string.IsNullOrEmpty(childProjectPath)
-                                && !excludedProjects.Contains(childProjectPath, StringComparer.OrdinalIgnoreCase))
-                            {
-                                var restoreReference = new ProjectRestoreReference()
-                                {
-                                    ProjectPath = childProjectPath,
-                                    ProjectUniqueName = childProjectPath
-                                };
-
-                                results.Add(restoreReference);
-                            }
-                        }
+                        continue;
                     }
-                    catch (Exception ex)
+
+                    // Set missing reference if
+                    // 1. reference is null OR
+                    // 2. reference is not resolved which means project is not loaded or assembly not found.
+                    else if (reference3 == null || !reference3.Resolved)
                     {
-                        // Exceptions are expected in some scenarios for native projects,
-                        // ignore them and show a warning
+                        // Skip missing references and show a warning
                         hasMissingReferences = true;
+                        continue;
+                    }
 
-                        log.LogDebug(ex.ToString());
+                    // Skip missing references
+                    if (childReference.SourceProject != null)
+                    {
+                        if (EnvDTEProjectUtility.HasUnsupportedProjectCapability(childReference.SourceProject))
+                        {
+                            // Skip this shared project
+                            continue;
+                        }
 
-                        Debug.Fail("Unable to find project dependencies: " + ex.ToString());
+                        var childProjectPath = EnvDTEProjectInfoUtility.GetFullProjectPath(childReference.SourceProject);
+
+                        // Skip projects which have ReferenceOutputAssembly=false
+                        if (!string.IsNullOrEmpty(childProjectPath)
+                            && !excludedProjects.Contains(childProjectPath, StringComparer.OrdinalIgnoreCase))
+                        {
+                            var restoreReference = new ProjectRestoreReference()
+                            {
+                                ProjectPath = childProjectPath,
+                                ProjectUniqueName = childProjectPath
+                            };
+
+                            results.Add(restoreReference);
+                        }
                     }
                 }
-
-                if (hasMissingReferences)
+                catch (Exception ex)
                 {
-                    // Log a generic message once per project if any items could not be resolved.
-                    // In most cases this can be ignored, but in the rare case where the unresolved
-                    // item is actually a project the restore result will be incomplete.
-                    var message = string.Format(
-                        CultureInfo.CurrentCulture,
-                        Strings.UnresolvedItemDuringProjectClosureWalk,
-                        EnvDTEProjectInfoUtility.GetUniqueName(project));
+                    // Exceptions are expected in some scenarios for native projects,
+                    // ignore them and show a warning
+                    hasMissingReferences = true;
 
-                    log.LogVerbose(message);
+                    log.LogDebug(ex.ToString());
+
+                    Debug.Fail("Unable to find project dependencies: " + ex.ToString());
                 }
+            }
 
-                return results;
-            });
+            if (hasMissingReferences)
+            {
+                // Log a generic message once per project if any items could not be resolved.
+                // In most cases this can be ignored, but in the rare case where the unresolved
+                // item is actually a project the restore result will be incomplete.
+                var message = string.Format(
+                    CultureInfo.CurrentCulture,
+                    Strings.UnresolvedItemDuringProjectClosureWalk,
+                    EnvDTEProjectInfoUtility.GetUniqueName(project));
+
+                log.LogVerbose(message);
+            }
+
+            return results;
         }
 
         private static IEnumerable<Reference> GetProjectReferences(EnvDTEProject project)

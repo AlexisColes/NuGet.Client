@@ -20,7 +20,8 @@ namespace NuGet.Protocol.Core.Types
         {
             if (status == DownloadResourceResultStatus.Available)
             {
-                throw new ArgumentException("A stream should be provided when the result is available.");
+                throw new ArgumentException("A stream should be provided when the result is available.",
+                    nameof(status));
             }
 
             Status = status;

@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft;
 using NuGet.Packaging.Core;
 using NuGet.ProjectManagement;
 using NuGet.ProjectManagement.Projects;
 using NuGet.ProjectModel;
 using NuGet.VisualStudio;
-using EnvDTEProject = EnvDTE.Project;
 
 namespace NuGet.PackageManagement.VisualStudio
 {
@@ -25,17 +25,15 @@ namespace NuGet.PackageManagement.VisualStudio
         public ProjectJsonBuildIntegratedProjectSystem(
             string jsonConfigPath,
             string msbuildProjectFilePath,
-            IVsProjectAdapter vsProjectAdapter,
-            string uniqueName)
+            IVsProjectAdapter vsProjectAdapter)
             : base(jsonConfigPath, msbuildProjectFilePath)
         {
+            Assumes.Present(vsProjectAdapter);
+
             _vsProjectAdapter = vsProjectAdapter;
 
-            // set project id
-            var projectId = _vsProjectAdapter.ProjectId;
-            InternalMetadata.Add(NuGetProjectMetadataKeys.ProjectId, projectId);
-
-            InternalMetadata.Add(NuGetProjectMetadataKeys.UniqueName, uniqueName);
+            InternalMetadata.Add(NuGetProjectMetadataKeys.ProjectId, _vsProjectAdapter.ProjectId);
+            InternalMetadata.Add(NuGetProjectMetadataKeys.UniqueName, _vsProjectAdapter.CustomUniqueName);
         }
 
         private IScriptExecutor ScriptExecutor
@@ -65,13 +63,10 @@ namespace NuGet.PackageManagement.VisualStudio
 
         public override Task<IReadOnlyList<ProjectRestoreReference>> GetDirectProjectReferencesAsync(DependencyGraphCacheContext context)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
+            Assumes.Present(context);
 
             var resolvedProjects = context.DeferredPackageSpecs.Select(project => project.Name);
-            return VSProjectRestoreReferenceUtility.GetDirectProjectReferences(_vsProjectAdapter.DteProject, resolvedProjects, context.Logger);
+            return _vsProjectAdapter.GetDirectProjectReferencesAsync(resolvedProjects, context.Logger);
         }
     }
 }

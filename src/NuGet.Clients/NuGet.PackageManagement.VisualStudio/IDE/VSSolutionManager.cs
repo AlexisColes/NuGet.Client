@@ -37,7 +37,7 @@ namespace NuGet.PackageManagement.VisualStudio
         private IVsMonitorSelection _vsMonitorSelection;
         private uint _solutionLoadedUICookie;
         private IVsSolution _vsSolution;
-       
+
         private readonly IServiceProvider _serviceProvider;
         private readonly IProjectSystemCache _projectSystemCache;
         private readonly NuGetProjectFactory _projectSystemFactory;
@@ -223,7 +223,7 @@ namespace NuGet.PackageManagement.VisualStudio
             if (DefaultNuGetProjectName == null)
             {
                 DefaultNuGetProjectName = projectName;
-            } 
+            }
 
             if (NuGetProjectUpdated != null)
             {
@@ -361,7 +361,7 @@ namespace NuGet.PackageManagement.VisualStudio
                         // Solution is open and 'Save As' is not required. Return true.
                         return true;
                     }
-                    
+
                     var projects = _projectSystemCache.GetNuGetProjects();
                     if (!projects.Any() || projects.Any(project => !(project is INuGetIntegratedProject)))
                     {
@@ -381,68 +381,68 @@ namespace NuGet.PackageManagement.VisualStudio
             }
         }
 
+#if VS14
+        public Task<IEnumerable<string>> GetDeferredProjectsFilePathAsync()
+        {
+            // Not applicable for Dev14 so always return empty list.
+            return Task.FromResult(Enumerable.Empty<string>());
+        }
+#else
         public async Task<IEnumerable<string>> GetDeferredProjectsFilePathAsync()
         {
-#if VS14
-            // Not applicable for Dev14 so always return empty list.
-            return await Task.FromResult(Enumerable.Empty<string>());
-#else
-            return await NuGetUIThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            var projectPaths = new List<string>();
+            IEnumHierarchies enumHierarchies;
+            var guid = Guid.Empty;
+            var hr = _vsSolution.GetProjectEnum((uint)__VSENUMPROJFLAGS3.EPF_DEFERRED, ref guid, out enumHierarchies);
+
+            ErrorHandler.ThrowOnFailure(hr);
+
+            // Loop all projects found
+            if (enumHierarchies != null)
             {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var projectPaths = new List<string>();
-                IEnumHierarchies enumHierarchies;
-                var guid = Guid.Empty;
-                var hr = _vsSolution.GetProjectEnum((uint)__VSENUMPROJFLAGS3.EPF_DEFERRED, ref guid, out enumHierarchies);
-
-                ErrorHandler.ThrowOnFailure(hr);
-
-                // Loop all projects found
-                if (enumHierarchies != null)
+                // Loop projects found
+                var hierarchy = new IVsHierarchy[1];
+                uint fetched = 0;
+                while (enumHierarchies.Next(1, hierarchy, out fetched) == VSConstants.S_OK && fetched == 1)
                 {
-                    // Loop projects found
-                    var hierarchy = new IVsHierarchy[1];
-                    uint fetched = 0;
-                    while (enumHierarchies.Next(1, hierarchy, out fetched) == VSConstants.S_OK && fetched == 1)
-                    {
-                        string projectPath;
-                        hierarchy[0].GetCanonicalName(VSConstants.VSITEMID_ROOT, out projectPath);
+                    string projectPath;
+                    hierarchy[0].GetCanonicalName(VSConstants.VSITEMID_ROOT, out projectPath);
 
-                        if (!string.IsNullOrEmpty(projectPath))
-                        {
-                            projectPaths.Add(projectPath);
-                        }
+                    if (!string.IsNullOrEmpty(projectPath))
+                    {
+                        projectPaths.Add(projectPath);
                     }
                 }
+            }
 
-                return projectPaths;
-            });
-#endif
+            return projectPaths;
         }
+#endif
 
+#if VS14
         public async Task<bool> SolutionHasDeferredProjectsAsync()
         {
-#if VS14
             // for Dev14 always return false since DPL not exists there.
             return await Task.FromResult(false);
-#else
-            return await NuGetUIThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                // check if solution is DPL enabled or not. 
-                if (!IsSolutionDPLEnabled)
-                {
-                    return false;
-                }
-
-                // Get deferred projects count of current solution
-                var value = GetVSSolutionProperty((int)(__VSPROPID7.VSPROPID_DeferredProjectCount));
-                return (int)value != 0;
-            });
-#endif
         }
+#else
+        public async Task<bool> SolutionHasDeferredProjectsAsync()
+        {
+            await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            // check if solution is DPL enabled or not.
+            if (!IsSolutionDPLEnabled)
+            {
+                return false;
+            }
+
+            // Get deferred projects count of current solution
+            var value = GetVSSolutionProperty((int)(__VSPROPID7.VSPROPID_DeferredProjectCount));
+            return (int)value != 0;
+        }
+#endif
 
         public bool IsSolutionDPLEnabled
         {
@@ -502,7 +502,7 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                int hr = VSConstants.S_OK;
+                var hr = VSConstants.S_OK;
 
                 // 1. Ask the solution to load the required project. To reduce wait time,
                 //    we load only the project we need, not the entire solution.
@@ -550,39 +550,39 @@ namespace NuGet.PackageManagement.VisualStudio
             }
         }
 
-        private IEnumerable<IVsHierarchy> GetDeferredProjectIVsHierarchy()
-        {
 #if VS14
+        private IEnumerable<IVsHierarchy> GetDeferredProjects()
+        {
             // Not applicable for Dev14 so always return empty list.
-            return Task.FromResult(Enumerable.Empty<IVsHierarchy>());
-#else
-            return NuGetUIThreadHelper.JoinableTaskFactory.Run(async () =>
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                var projectIVsHierarchys = new List<IVsHierarchy>();
-                IEnumHierarchies enumHierarchies;
-                var guid = Guid.Empty;
-                var hr = _vsSolution.GetProjectEnum((uint)__VSENUMPROJFLAGS3.EPF_DEFERRED, ref guid, out enumHierarchies);
-
-                ErrorHandler.ThrowOnFailure(hr);
-
-                // Loop all projects found
-                if (enumHierarchies != null)
-                {
-                    // Loop projects found
-                    var hierarchy = new IVsHierarchy[1];
-                    uint fetched = 0;
-                    while (enumHierarchies.Next(1, hierarchy, out fetched) == VSConstants.S_OK && fetched == 1)
-                    {
-                        projectIVsHierarchys.Add(hierarchy[0]);
-                    }
-                }
-
-                return projectIVsHierarchys;
-            });
-#endif
+            return Enumerable.Empty<IVsHierarchy>();
         }
+#else
+        private IEnumerable<IVsHierarchy> GetDeferredProjects()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var projectIVsHierarchys = new List<IVsHierarchy>();
+
+            IEnumHierarchies enumHierarchies;
+            var guid = Guid.Empty;
+            var hr = _vsSolution.GetProjectEnum((uint)__VSENUMPROJFLAGS3.EPF_DEFERRED, ref guid, out enumHierarchies);
+            ErrorHandler.ThrowOnFailure(hr);
+
+            // Loop all projects found
+            if (enumHierarchies != null)
+            {
+                // Loop projects found
+                var hierarchy = new IVsHierarchy[1];
+                uint fetched = 0;
+                while (enumHierarchies.Next(1, hierarchy, out fetched) == VSConstants.S_OK && fetched == 1)
+                {
+                    projectIVsHierarchys.Add(hierarchy[0]);
+                }
+            }
+
+            return projectIVsHierarchys;
+        }
+#endif
 
         private async Task<string> GetSolutionFilePathAsync()
         {
@@ -646,12 +646,9 @@ namespace NuGet.PackageManagement.VisualStudio
 
         private void OnSolutionExistsAndFullyLoaded()
         {
-            Debug.Assert(ThreadHelper.CheckAccess());
+            ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (SolutionOpening != null)
-            {
-                SolutionOpening(this, EventArgs.Empty);
-            }
+            SolutionOpening?.Invoke(this, EventArgs.Empty);
 
             // although the SolutionOpened event fires, the solution may be only in memory (e.g. when
             // doing File - New File). In that case, we don't want to act on the event.
@@ -662,10 +659,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
             EnsureNuGetAndVsProjectAdapterCache();
 
-            if (SolutionOpened != null)
-            {
-                SolutionOpened(this, EventArgs.Empty);
-            }
+            SolutionOpened?.Invoke(this, EventArgs.Empty);
 
             _solutionOpenedRaised = true;
         }
@@ -831,9 +825,31 @@ namespace NuGet.PackageManagement.VisualStudio
             {
                 try
                 {
+                    var defferedProjects = GetDeferredProjects();
+
+                    foreach (var project in defferedProjects)
+                    {
+                        try
+                        {
+                            var vsProjectAdapter = _vsProjectAdapterProvider.CreateVsProject(project, () => EnsureProjectIsLoaded(project));
+                            AddVsProjectAdapterToCache(vsProjectAdapter);
+                        }
+                        catch (Exception e)
+                        {
+                            // Ignore failed projects.
+                            _logger.LogWarning($"The project {project} failed to initialize as a NuGet project.");
+                            _logger.LogError(e.ToString());
+                        }
+
+                        // Consider that the cache is initialized only when there are any projects to add.
+                        _cacheInitialized = true;
+                    }
+
                     var dte = _serviceProvider.GetDTE();
-                    var supportedProjects = EnvDTESolutionUtility.GetAllEnvDTEProjects(dte)
-                        .Where(project => EnvDTEProjectUtility.IsSupported(project));
+
+                    var supportedProjects = EnvDTESolutionUtility
+                        .GetAllEnvDTEProjects(dte)
+                        .Where(EnvDTEProjectUtility.IsSupported);
 
                     var defferedProjects = GetDeferredProjectIVsHierarchy();
 
@@ -858,7 +874,8 @@ namespace NuGet.PackageManagement.VisualStudio
                     {
                         try
                         {
-                            AddVsProjectAdapterToCache(_vsProjectAdapterProvider.CreateVsProject(project));
+                            var vsProjectAdapter = _vsProjectAdapterProvider.CreateVsProject(project);
+                            AddVsProjectAdapterToCache(vsProjectAdapter);
                         }
                         catch (Exception e)
                         {
@@ -919,17 +936,6 @@ namespace NuGet.PackageManagement.VisualStudio
                     oldProjectName.CustomUniqueName :
                     newProjectName.ShortName;
             }
-        }
-
-        private string GetDeferredProjectPath(IVsHierarchy project)
-        {
-            return NuGetUIThreadHelper.JoinableTaskFactory.Run(async delegate
-            {
-                await NuGetUIThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                project.GetCanonicalName(VSConstants.VSITEMID_ROOT, out string projectPath);
-
-                return projectPath;
-            });
         }
 
         private void RemoveVsProjectAdapterFromCache(string name)
@@ -1057,7 +1063,7 @@ namespace NuGet.PackageManagement.VisualStudio
 
             foreach (var vsProjectAdapter in vsProjectAdapters)
             {
-                if (vsProjectAdapter.IsSupportsReference)
+                if (vsProjectAdapter.SupportsReference)
                 {
                     foreach (var referencedProject in vsProjectAdapter.GetReferencedProjects())
                     {
@@ -1125,7 +1131,6 @@ namespace NuGet.PackageManagement.VisualStudio
             if (dwCmdUICookie == _solutionLoadedUICookie
                 && fActive == 1)
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
                 OnSolutionExistsAndFullyLoaded();
             }
 

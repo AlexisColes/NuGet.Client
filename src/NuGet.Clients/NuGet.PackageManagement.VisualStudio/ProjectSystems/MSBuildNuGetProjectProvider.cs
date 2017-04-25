@@ -74,8 +74,7 @@ namespace NuGet.PackageManagement.VisualStudio
                         result = new ProjectJsonBuildIntegratedProjectSystem(
                             projectJsonPath,
                             msbuildProjectFile.FullName,
-                            vsProjectAdapter,
-                            vsProjectAdapter.CustomUniqueName);
+                            vsProjectAdapter);
                     }
                 }
             }

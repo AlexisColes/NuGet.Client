@@ -53,8 +53,8 @@ namespace NuGet.VisualStudio
             foreach (var projectPath in deferredProjectsPath)
             {
                 // packages.config
-                string packagesConfigFilePath = Path.Combine(Path.GetDirectoryName(projectPath), "packages.config");
-                bool packagesConfigFileExists = await deferredWorkspaceService.EntityExists(packagesConfigFilePath);
+                var packagesConfigFilePath = Path.Combine(Path.GetDirectoryName(projectPath), "packages.config");
+                var packagesConfigFileExists = await deferredWorkspaceService.EntityExists(packagesConfigFilePath);
 
                 if (packagesConfigFileExists)
                 {
@@ -89,8 +89,8 @@ namespace NuGet.VisualStudio
                 {
 
                     // project.json
-                    string projectJsonFilePath = Path.Combine(Path.GetDirectoryName(projectPath), "project.json");
-                    bool projectJsonFileExists = await deferredWorkspaceService.EntityExists(projectJsonFilePath);
+                    var projectJsonFilePath = Path.Combine(Path.GetDirectoryName(projectPath), "project.json");
+                    var projectJsonFileExists = await deferredWorkspaceService.EntityExists(projectJsonFilePath);
 
                     if (projectJsonFileExists)
                     {
